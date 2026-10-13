@@ -4,9 +4,20 @@ import { useEffect, useRef } from "react"
 import { lyricIndexAt, type LyricLine } from "@/lib/music/lrc"
 import { cn } from "@/lib/utils"
 
-export function LyricsView({ lines, time, className }: { lines: LyricLine[]; time: number; className?: string }) {
+export function LyricsView({
+  lines,
+  time,
+  className,
+  onSeek,
+}: {
+  lines: LyricLine[]
+  time: number
+  className?: string
+  onSeek?: (time: number) => void
+}) {
   const active = lyricIndexAt(lines, time)
   const listRef = useRef<HTMLOListElement>(null)
+  const primed = useRef(false)
 
   useEffect(() => {
     const list = listRef.current
@@ -15,34 +26,40 @@ export function LyricsView({ lines, time, className }: { lines: LyricLine[]; tim
     const listTop = list.getBoundingClientRect().top
     const lineTop = node.getBoundingClientRect().top
     const next = list.scrollTop + (lineTop - listTop) - list.clientHeight / 2 + node.clientHeight / 2
-    list.scrollTo({ top: Math.max(0, next) })
+    list.scrollTo({ top: Math.max(0, next), behavior: primed.current ? "smooth" : "auto" })
+    primed.current = true
   }, [active, lines])
 
   if (lines.length === 0) {
-    return <p className="px-6 text-center text-sm text-muted-foreground">这首没有逐行歌词。</p>
+    return <p className="px-1 text-sm text-white/55">这首没有逐行歌词。</p>
   }
 
   return (
     <ol
       ref={listRef}
       className={cn(
-        "max-h-64 space-y-3 overflow-y-auto px-2 py-6 text-center [mask-image:linear-gradient(180deg,transparent,#000_8%,#000_92%,transparent)]",
+        "space-y-5 overflow-y-auto py-16 text-left [mask-image:linear-gradient(180deg,transparent,#000_12%,#000_88%,transparent)]",
         className
       )}
       aria-label="歌词"
     >
-      {lines.map((line, index) => (
-        <li
-          key={`${line.time}-${index}`}
-          data-active={index === active ? "true" : "false"}
-          className={cn(
-            "text-lg transition",
-            index === active ? "font-semibold text-foreground" : "text-muted-foreground/70"
-          )}
-        >
-          {line.text}
-        </li>
-      ))}
+      {lines.map((line, index) => {
+        const current = index === active
+        return (
+          <li key={`${line.time}-${index}`} data-active={current ? "true" : "false"}>
+            <button
+              type="button"
+              className={cn(
+                "w-full text-left text-[28px] leading-[1.15] font-bold tracking-[-0.4px] transition-colors duration-300",
+                current ? "text-white" : "text-white/35 hover:text-white/55"
+              )}
+              onClick={() => onSeek?.(line.time)}
+            >
+              {line.text}
+            </button>
+          </li>
+        )
+      })}
     </ol>
   )
 }
