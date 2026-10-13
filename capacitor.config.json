@@ -1,0 +1,14 @@
+{
+  "appId": "com.pulsefit.app",
+  "appName": "燃律",
+  "webDir": "out",
+  "backgroundColor": "#09090b",
+  "ios": {
+    "backgroundColor": "#09090b",
+    "contentInset": "automatic"
+  },
+  "android": {
+    "backgroundColor": "#09090b",
+    "allowMixedContent": false
+  }
+}
