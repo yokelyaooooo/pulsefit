@@ -1,69 +1,46 @@
 import { useId } from "react"
 import { cn } from "@/lib/utils"
 
-const flame =
-  "M470 430C420 430 372 492 360 575C346 676 338 770 404 848C470 926 600 910 646 812C686 726 648 640 596 558C556 494 520 430 470 430Z"
-const stem = "M548 392A48 48 0 0 1 644 392V700A48 48 0 0 1 548 700Z"
-const flag = "M644 336H820A56 56 0 0 1 820 448H644A56 56 0 0 1 644 336Z"
-
 export function BrandMark({ className }: { className?: string }) {
   const raw = useId().replace(/:/g, "")
   const bg = `${raw}-bg`
-  const glow = `${raw}-glow`
-  const depth = `${raw}-depth`
-  const halo = `${raw}-halo`
-  const soft = `${raw}-soft`
+  const body = `${raw}-body`
   const clip = `${raw}-clip`
   return (
     <svg viewBox="0 0 1024 1024" className={cn("shrink-0", className)} aria-hidden>
       <defs>
-        <linearGradient id={bg} x1="48" y1="16" x2="990" y2="1024" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#FFF6EE" />
-          <stop offset="0.16" stopColor="#FFE0CC" />
-          <stop offset="0.38" stopColor="#F8C0B4" />
-          <stop offset="0.58" stopColor="#F3A8B8" />
-          <stop offset="0.78" stopColor="#E8B6D6" />
-          <stop offset="1" stopColor="#D4C4F2" />
+        <linearGradient id={bg} x1="72" y1="16" x2="980" y2="1024" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#FFE9DE" />
+          <stop offset="0.46" stopColor="#F6B7C6" />
+          <stop offset="1" stopColor="#E4C6EE" />
         </linearGradient>
-        <radialGradient id={glow} cx="0.28" cy="0.16" r="0.72">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.8" />
-          <stop offset="0.42" stopColor="#fff" stopOpacity="0.16" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        <radialGradient id={body} cx="0.36" cy="0.3" r="0.78">
+          <stop offset="0" stopColor="#FFFDFB" />
+          <stop offset="1" stopColor="#FFE3DA" />
         </radialGradient>
-        <radialGradient id={depth} cx="0.7" cy="0.92" r="0.58">
-          <stop offset="0" stopColor="#C992AE" stopOpacity="0.18" />
-          <stop offset="1" stopColor="#C992AE" stopOpacity="0" />
-        </radialGradient>
-        <filter id={halo} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="16" />
-        </filter>
-        <filter id={soft} x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="10" stdDeviation="14" floodColor="#D492A8" floodOpacity="0.28" />
-        </filter>
         <clipPath id={clip}>
           <rect width="1024" height="1024" rx="230" />
         </clipPath>
       </defs>
       <g clipPath={`url(#${clip})`}>
         <rect width="1024" height="1024" fill={`url(#${bg})`} />
-        <rect width="1024" height="1024" fill={`url(#${glow})`} />
-        <rect width="1024" height="1024" fill={`url(#${depth})`} />
-        <g fill="#fff" transform="translate(-84 -53)">
-          <g filter={`url(#${halo})`} opacity="0.42">
-            <path d={flame} />
-            <path d={stem} />
-            <g transform="rotate(-36 644 392)">
-              <path d={flag} />
-            </g>
-          </g>
-          <g filter={`url(#${soft})`}>
-            <path d={flame} />
-            <path d={stem} />
-            <g transform="rotate(-36 644 392)">
-              <path d={flag} />
-            </g>
-          </g>
-        </g>
+        <ellipse cx="512" cy="868" rx="200" ry="30" fill="#E098AE" opacity="0.28" />
+        <circle cx="512" cy="590" r="246" fill={`url(#${body})`} />
+        <ellipse cx="430" cy="500" rx="78" ry="42" fill="#fff" opacity="0.55" />
+        <path d="M312 575C312 348 712 348 712 575" fill="none" stroke="#E56D8C" strokeWidth="78" strokeLinecap="round" />
+        <circle cx="312" cy="590" r="80" fill="#E56D8C" />
+        <circle cx="712" cy="590" r="80" fill="#E56D8C" />
+        <circle cx="312" cy="590" r="38" fill="#FFF5F7" />
+        <circle cx="712" cy="590" r="38" fill="#FFF5F7" />
+        <rect x="368" y="492" width="288" height="52" rx="26" fill="#F08A96" />
+        <rect x="392" y="500" width="240" height="14" rx="7" fill="#fff" opacity="0.35" />
+        <circle cx="442" cy="636" r="42" fill="#4E3840" />
+        <circle cx="582" cy="636" r="42" fill="#4E3840" />
+        <circle cx="428" cy="622" r="14" fill="#fff" />
+        <circle cx="568" cy="622" r="14" fill="#fff" />
+        <circle cx="370" cy="716" r="28" fill="#F4A8B6" />
+        <circle cx="654" cy="716" r="28" fill="#F4A8B6" />
+        <path d="M466 714Q512 766 558 714" fill="none" stroke="#4E3840" strokeWidth="22" strokeLinecap="round" />
       </g>
     </svg>
   )
