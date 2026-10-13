@@ -109,14 +109,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <aside className="hidden bg-black lg:block">
-          <div className="sticky top-0 h-dvh">
+          <div className="sticky top-0 flex h-dvh justify-center">
             <NowPlaying />
           </div>
         </aside>
       </div>
 
       {open && !onPlayRoute ? (
-        <div className="fixed inset-0 z-40 overflow-y-auto bg-black lg:hidden">
+        <div className="fixed top-0 left-0 z-40 h-dvh w-screen overflow-hidden bg-black lg:hidden">
           <NowPlaying onClose={() => setOpen(false)} />
         </div>
       ) : null}

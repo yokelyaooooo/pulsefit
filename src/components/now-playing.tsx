@@ -46,7 +46,7 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
   }, [now, player])
 
   return (
-    <section className="relative w-full max-w-[430px] overflow-hidden text-white">
+    <section className="relative flex h-full w-full max-w-[430px] flex-col overflow-hidden text-white">
       <div className="pointer-events-none absolute inset-0">
         {/* Blurred artwork supplies the player color, the same way Apple Music does. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -55,8 +55,8 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/20 to-black/75" />
       </div>
 
-      <div className="relative flex flex-col px-5 pt-3 pb-6">
-        <div className="flex h-10 items-center justify-between">
+      <div className="relative flex h-full min-h-0 flex-col px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <div className="flex h-10 shrink-0 items-center justify-between">
           {onClose ? (
             <button type="button" className="grid size-9 place-items-center text-white/90" aria-label="收起" onClick={onClose}>
               <ChevronDown className="size-7" strokeWidth={2.25} />
@@ -78,52 +78,54 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
           </button>
         </div>
 
-        <div className="grid">
+        <div className="relative min-h-0 flex-1">
           <div
             className={cn(
-              "col-start-1 row-start-1 transition duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+              "absolute inset-0 flex flex-col transition duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none [container-type:size]",
               lyricsOpen ? "pointer-events-none scale-[0.96] opacity-0" : "opacity-100"
             )}
             inert={lyricsOpen}
           >
-            <button
-              type="button"
-              className="mt-2 block w-full"
-              aria-label="查看歌词"
-              onClick={() => setLyricsOpen(true)}
-            >
-              <div ref={coverRef} className="origin-center">
-                <CoverArt
-                  seed={now?.id ?? "pulsefit"}
-                  title={now?.title ?? "燃律"}
-                  artwork={now?.artwork}
-                  className="aspect-square w-full rounded-[12px]"
-                />
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+              <button
+                type="button"
+                className="block aspect-square w-[min(100cqw,calc(100cqh-5.75rem))]"
+                aria-label="查看歌词"
+                onClick={() => setLyricsOpen(true)}
+              >
+                <div ref={coverRef} className="origin-center">
+                  <CoverArt
+                    seed={now?.id ?? "pulsefit"}
+                    title={now?.title ?? "燃律"}
+                    artwork={now?.artwork}
+                    className="aspect-square w-full rounded-[12px]"
+                  />
+                </div>
+              </button>
+              <div className="mt-5 flex w-full shrink-0 items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-[22px] leading-tight font-bold tracking-[-0.4px]">
+                    {now ? now.title : "还没有在播"}
+                  </h2>
+                  <p className="mt-1 truncate text-[17px] text-[#ff4d6a]">{now ? now.artist : "从首页或曲库选一首"}</p>
+                </div>
+                <p className="mb-1 flex shrink-0 items-center gap-1.5 text-[12px] font-medium text-white/60 tabular-nums">
+                  <span ref={pipRef} className="size-1.5 rounded-full bg-white" />
+                  <span ref={bpmRef}>{now?.bpm ?? "—"}</span>
+                  BPM
+                </p>
               </div>
-            </button>
-            <div className="mt-6 flex items-end justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="truncate text-[22px] leading-tight font-bold tracking-[-0.4px]">
-                  {now ? now.title : "还没有在播"}
-                </h2>
-                <p className="mt-1 truncate text-[17px] text-[#ff4d6a]">{now ? now.artist : "从首页或曲库选一首"}</p>
-              </div>
-              <p className="mb-1 flex shrink-0 items-center gap-1.5 text-[12px] font-medium text-white/60 tabular-nums">
-                <span ref={pipRef} className="size-1.5 rounded-full bg-white" />
-                <span ref={bpmRef}>{now?.bpm ?? "—"}</span>
-                BPM
-              </p>
             </div>
           </div>
 
           <div
             className={cn(
-              "col-start-1 row-start-1 flex flex-col transition duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+              "absolute inset-0 flex flex-col transition duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
               lyricsOpen ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0"
             )}
             inert={!lyricsOpen}
           >
-            <button type="button" className="mt-1 flex items-center gap-3 text-left" onClick={() => setLyricsOpen(false)}>
+            <button type="button" className="mt-1 flex shrink-0 items-center gap-3 text-left" onClick={() => setLyricsOpen(false)}>
               <CoverArt
                 seed={now?.id ?? "pulsefit"}
                 title={now?.title ?? "燃律"}
@@ -139,12 +141,12 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
               lines={player.lyrics}
               time={position}
               onSeek={(time) => player.seek(time)}
-              className="mt-2 h-[430px]"
+              className="mt-2 min-h-0 flex-1"
             />
           </div>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 shrink-0">
           <Slider
             aria-label="播放进度"
             className={sliderTone}
@@ -165,7 +167,7 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between px-2">
+        <div className="mt-3 flex shrink-0 items-center justify-between px-2">
           <button type="button" className="grid size-12 place-items-center text-white disabled:opacity-30" aria-label="上一首" onClick={() => void player.prev()} disabled={!now}>
             <SkipBack className="size-8 fill-white" />
           </button>
@@ -182,7 +184,7 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
           </button>
         </div>
 
-        <label className="mt-4 flex items-center gap-3 text-white/80">
+        <label className="mt-4 flex shrink-0 items-center gap-3 text-white/80">
           <Volume1 className="size-4 shrink-0" />
           <Slider
             aria-label="音量"
@@ -197,7 +199,7 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
         </label>
 
         {local ? (
-          <div className="mt-3 grid grid-cols-2 gap-4 text-[11px] text-white/45">
+          <div className="mt-3 grid shrink-0 grid-cols-2 gap-4 text-[11px] text-white/45">
             <label className="space-y-1">
               <span className="flex justify-between">
                 节拍
