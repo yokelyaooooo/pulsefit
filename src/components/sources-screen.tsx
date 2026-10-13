@@ -12,13 +12,14 @@ import {
 import { neteaseAccount, neteasePlaylists, neteaseQrPoll, neteaseQrStart } from "@/lib/music/netease"
 import { PROVIDER_NOTES } from "@/lib/music/notes"
 import { describeQqCookie, qqConnect, qqPlaylists } from "@/lib/music/qq"
-import type { PlaylistItem } from "@/lib/music/types"
+import type { CatalogItem, PlaylistItem } from "@/lib/music/types"
 import { SourceMark } from "@/components/artwork"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { usePlayer } from "@/components/player-provider"
 import { rememberCatalog } from "@/lib/music/local"
 import { tracksForPlaylist } from "@/lib/music/resolve"
+import { rememberImported } from "@/lib/music/wall"
 
 export function SourcesScreen() {
   const settings = useSyncExternalStore(subscribeMusic, getMusicSnapshot, getServerMusicSnapshot)
@@ -105,6 +106,7 @@ export function SourcesScreen() {
               void neteasePlaylists(getMusicSnapshot())
                 .then((items) => {
                   setLists(items)
+                  rememberPlaylists(items)
                   setMessage(items.length ? `同步了 ${items.length} 个歌单` : "这个账号没有返回歌单")
                 })
                 .catch((caught: unknown) => setMessage(caught instanceof Error ? caught.message : "歌单同步失败"))
@@ -163,6 +165,7 @@ export function SourcesScreen() {
               void qqPlaylists(getMusicSnapshot())
                 .then((items) => {
                   setLists(items)
+                  rememberPlaylists(items)
                   setMessage(items.length ? `同步了 ${items.length} 个歌单` : "没有返回歌单")
                 })
                 .catch((caught: unknown) => setMessage(caught instanceof Error ? caught.message : "歌单同步失败"))
@@ -202,6 +205,7 @@ export function SourcesScreen() {
               void appleLibrary(getMusicSnapshot().appleToken)
                 .then((items) => {
                   setLists(items)
+                  rememberPlaylists(items)
                   setMessage(items.length ? `资料库里有 ${items.length} 个播放列表` : "资料库没有返回播放列表")
                 })
                 .catch((caught: unknown) => setMessage(caught instanceof Error ? caught.message : "资料库读取失败"))
@@ -240,13 +244,20 @@ export function SourcesScreen() {
                     void tracksForPlaylist(list.source, list.nativeId, getMusicSnapshot())
                       .then((items) => {
                         rememberCatalog(items)
+                        rememberTracks(items)
                         setTracksNote(items.length ? `${list.name}：${items.length} 首，点第一首开始。` : `${list.name} 没有解析出歌曲`)
                         if (items[0]) void player.playTrack(items[0].id, { queue: items.map((item) => item.id) })
                       })
                       .catch((caught: unknown) => setMessage(caught instanceof Error ? caught.message : "歌曲读取失败"))
                   }}
                 >
-                  <SourceMark source={list.source} className="size-12 rounded-[12px]" />
+                  {list.cover?.startsWith("https://") ? (
+                    // Playlist art comes from the connected account at sync time.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={list.cover} alt="" className="size-12 shrink-0 rounded-[12px] object-cover" />
+                  ) : (
+                    <SourceMark source={list.source} className="size-12 rounded-[12px]" />
+                  )}
                   <span className="min-w-0">
                     <span className="t-headline block truncate">{list.name}</span>
                     <span className="t-caption mt-0.5 block text-[color:var(--label-secondary)]">
@@ -261,6 +272,30 @@ export function SourcesScreen() {
         </section>
       ) : null}
     </div>
+  )
+}
+
+function rememberPlaylists(items: PlaylistItem[]) {
+  rememberImported(
+    items.map((list) => ({
+      id: list.id,
+      title: list.name,
+      artist: list.source,
+      artwork: list.cover ?? "",
+      source: list.source,
+    }))
+  )
+}
+
+function rememberTracks(items: CatalogItem[]) {
+  rememberImported(
+    items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      artist: item.artist || item.album,
+      artwork: item.artwork ?? "",
+      source: item.source,
+    }))
   )
 }
 

@@ -18,6 +18,7 @@ import { localPlayable, recallCatalog, recallPlayable, rememberPlayable } from "
 import { resolvePlayback } from "@/lib/music/resolve"
 import type { MusicSource, Playable } from "@/lib/music/types"
 import { getMusicSnapshot } from "@/lib/music/config"
+import { notePlay } from "@/lib/music/wall"
 import {
   getPersistedSnapshot,
   getServerPersistedSnapshot,
@@ -184,6 +185,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     bpmRef.current = meta.bpm
     setPositionSec(0)
     setDurationSec(duration)
+    notePlay(meta.id)
   }, [])
 
   const playTrack = useCallback(async (id: string, options?: PlayOptions) => {

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { Paint } from "@/components/artwork"
 import { CoverArt } from "@/components/cover-art"
+import { Equalizer, VinylDisc, Waveform } from "@/components/music-marks"
 import { usePersistedStore } from "@/components/use-persisted-store"
 import { Heart, Pause, Play } from "lucide-react"
 import { usePlayer } from "@/components/player-provider"
@@ -38,8 +39,34 @@ export function LibraryScreen() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="t-large">曲库</h1>
+        <h1 className="t-large flex items-center gap-2">
+          曲库
+          <Equalizer />
+        </h1>
       </header>
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="t-headline">燃律 PulseFit</h2>
+          <Waveform />
+        </div>
+        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
+          {tracks.slice(0, 8).map((track) => (
+            <button
+              key={track.id}
+              type="button"
+              className="w-[132px] shrink-0 text-left"
+              onClick={() => void player.playTrack(track.id, { queue: tracks.map((item) => item.id) })}
+            >
+              <span className="relative block h-[104px]">
+                <VinylDisc className="size-[80%]" />
+                <CoverArt seed={track.id} title={track.title} className="absolute top-0 left-0 z-10 size-[104px] rounded-[14px]" />
+              </span>
+              <span className="t-caption mt-1 block truncate">{track.title}</span>
+              <span className="t-caption text-[color:var(--label-secondary)]">{track.bpm} BPM</span>
+            </button>
+          ))}
+        </div>
+      </section>
       <div className="grid grid-cols-4 gap-2">
         {tracks.slice(0, 4).map((track) => (
           <button
@@ -111,6 +138,7 @@ export function LibraryScreen() {
                 >
                   <span className="flex items-baseline gap-2">
                     <span className="font-medium">{track.title}</span>
+                    {playing ? <Equalizer /> : null}
                     <span className="text-xs text-muted-foreground">{track.titleEn}</span>
                   </span>
                   <span className="mt-1 block text-xs text-muted-foreground">

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Play, X } from "lucide-react"
 import { CoverArt } from "@/components/cover-art"
+import { BpmMark, Equalizer } from "@/components/music-marks"
 import { usePlayer } from "@/components/player-provider"
 import { Button } from "@/components/ui/button"
 import { tracks } from "@/lib/catalog"
@@ -61,9 +62,13 @@ export function FocusScreen() {
         <p className="t-caption relative text-white/80">{focus.kind === "day" ? "训练日" : "动作"}</p>
         <h1 className="t-large relative mt-1">{focus.name}</h1>
         <p className="t-sub relative mt-2 text-white/90">{focus.blurb}</p>
-        <p className="t-caption relative mt-4 text-white/80">
-          目标 {focus.targetBpm} BPM · 强度 {Math.round(focus.intensity * 100)} · {pinned ? "你的歌单" : "按类型、强度和 BPM 自动推荐"}
-        </p>
+        <div className="relative mt-4 flex items-center gap-2">
+          <BpmMark bpm={focus.targetBpm} />
+          <Equalizer className="text-white" />
+          <p className="t-caption text-white/80">
+            强度 {Math.round(focus.intensity * 100)} · {pinned ? "你的歌单" : "按类型、强度和 BPM 自动推荐"}
+          </p>
+        </div>
       </header>
 
       <div className="flex gap-2">
@@ -94,7 +99,10 @@ export function FocusScreen() {
                   className="min-w-0 flex-1 text-left"
                   onClick={() => void player.playTrack(track.id, { queue: ids, bpm: focus.targetBpm, energy: focus.intensity })}
                 >
-                  <span className="block truncate font-medium">{track.title}</span>
+                  <span className="flex items-center gap-2 truncate font-medium">
+                    {track.title}
+                    {player.trackId === track.id && player.status === "playing" ? <Equalizer /> : null}
+                  </span>
                   <span className="block text-xs text-muted-foreground">{track.bpm} BPM</span>
                 </button>
                 <Button

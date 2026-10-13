@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Minus, Pause, Play, Plus, SkipBack, SkipForward } from "lucide-react"
 import { CoverArt } from "@/components/cover-art"
 import { LyricsView } from "@/components/lyrics-view"
+import { VinylDisc } from "@/components/music-marks"
 import { usePlayer } from "@/components/player-provider"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
@@ -22,6 +23,37 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
   const [drag, setDrag] = useState<number | null>(null)
   const position = drag ?? player.positionSec
   const local = now?.source === "local"
+  const coverRef = useRef<HTMLDivElement>(null)
+  const bpmRef = useRef<HTMLSpanElement>(null)
+  const repRef = useRef<HTMLSpanElement>(null)
+  const beatRef = useRef<HTMLSpanElement>(null)
+  const dotsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    return player.subscribeVisual((snapshot) => {
+      const cover = coverRef.current
+      if (cover) {
+        const pulse = snapshot.playing ? 1 + (1 - snapshot.beatPhase) * 0.045 : 1
+        const glow = snapshot.playing ? 0.28 + (snapshot.kick ? 0.5 : (1 - snapshot.beatPhase) * 0.35) : 0.08
+        cover.style.transform = `scale(${pulse})`
+        cover.style.boxShadow = `0 18px 40px rgba(28,28,30,0.16), 0 0 ${24 + glow * 40}px rgba(255,45,85,${glow})`
+      }
+      const beats = Math.floor((snapshot.positionSec * snapshot.bpm) / 60)
+      const beatInBar = (beats % 4) + 1
+      if (bpmRef.current) bpmRef.current.textContent = String(Math.round(snapshot.bpm) || now?.bpm || "—")
+      if (repRef.current) repRef.current.textContent = now ? String(Math.floor(beats / 4) + 1) : "—"
+      if (beatRef.current) beatRef.current.textContent = now ? String(beatInBar) : "—"
+      const dots = dotsRef.current?.children
+      if (!dots) return
+      for (let index = 0; index < dots.length; index += 1) {
+        const dot = dots[index] as HTMLElement
+        const on = Boolean(now) && snapshot.playing && index === beats % 4
+        dot.style.transform = on ? "scale(1.4)" : "scale(1)"
+        dot.style.opacity = on ? "1" : "0.35"
+        dot.style.background = on ? "#ff2d55" : "rgba(60,60,67,0.35)"
+      }
+    })
+  }, [now, player])
 
   return (
     <section className="flex h-full min-h-[70vh] flex-col px-5 py-6 sm:px-8">
@@ -38,23 +70,38 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      <div className="mt-6 flex flex-1 flex-col items-center">
-        <CoverArt
-          seed={now?.id ?? "pulsefit"}
-          title={now?.title ?? "燃律"}
-          artwork={now?.artwork}
-          className="aspect-square w-full max-w-sm rounded-[28px] shadow-[0_18px_40px_rgba(28,28,30,0.16)]"
-        />
-        <div className="mt-6 w-full max-w-sm text-center">
-          <h2 className="t-1">{now ? now.title : "还没有在播"}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {now
-              ? `${now.artist} · ${now.bpm} BPM`
-              : "从首页或曲库选一首。本地节拍由浏览器合成，外部音源要各自登录。"}
-          </p>
+      <div className="mt-4 flex flex-1 flex-col items-center">
+        <div ref={coverRef} className="relative w-full max-w-[280px] origin-center rounded-[28px]">
+          <VinylDisc spinning={player.status === "playing"} className="-right-[8%] size-[78%]" />
+          <CoverArt
+            seed={now?.id ?? "pulsefit"}
+            title={now?.title ?? "燃律"}
+            artwork={now?.artwork}
+            className="relative z-10 aspect-square w-full rounded-[28px]"
+          />
         </div>
-        <div className="mt-4 w-full max-w-sm">
-          <LyricsView lines={player.lyrics} time={position} />
+        <div className="mt-5 w-full max-w-sm text-center">
+          <h2 className="t-1">{now ? now.title : "还没有在播"}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{now ? now.artist : "从首页或曲库选一首。"}</p>
+        </div>
+        <div className="mt-3 flex items-center justify-center gap-2 text-[13px] font-medium tabular-nums">
+          <span className="rounded-full bg-[var(--fill)] px-3 py-1">
+            BPM <span ref={bpmRef}>{now?.bpm ?? "—"}</span>
+          </span>
+          <span className="rounded-full bg-[var(--fill)] px-3 py-1">
+            组 <span ref={repRef}>{now ? "1" : "—"}</span>
+          </span>
+          <span className="rounded-full bg-[var(--fill)] px-3 py-1">
+            拍 <span ref={beatRef}>{now ? "1" : "—"}</span>
+          </span>
+        </div>
+        <div ref={dotsRef} className="mt-3 flex items-center justify-center gap-2" aria-hidden>
+          {[0, 1, 2, 3].map((dot) => (
+            <span key={dot} className="size-2.5 rounded-full bg-[rgba(60,60,67,0.35)]" />
+          ))}
+        </div>
+        <div className="mt-2 w-full max-w-sm">
+          <LyricsView lines={player.lyrics} time={position} className="h-[28vh] max-h-72" />
         </div>
       </div>
 
@@ -136,7 +183,9 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
             </label>
           </div>
         ) : (
-          <p className="text-center text-xs text-muted-foreground">流媒体按原曲播放。BPM 锁定只作用在本地节拍上。</p>
+          <p className="text-center text-xs text-muted-foreground">
+            {now ? "流媒体按原曲播放。BPM 锁定只作用在本地节拍上。" : "本地节拍由浏览器合成，外部音源要各自登录。"}
+          </p>
         )}
       </div>
     </section>

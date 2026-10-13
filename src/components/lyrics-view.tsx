@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 import { lyricIndexAt, type LyricLine } from "@/lib/music/lrc"
 import { cn } from "@/lib/utils"
 
-export function LyricsView({ lines, time }: { lines: LyricLine[]; time: number }) {
+export function LyricsView({ lines, time, className }: { lines: LyricLine[]; time: number; className?: string }) {
   const active = lyricIndexAt(lines, time)
   const listRef = useRef<HTMLOListElement>(null)
 
@@ -18,7 +18,14 @@ export function LyricsView({ lines, time }: { lines: LyricLine[]; time: number }
   }
 
   return (
-    <ol ref={listRef} className="max-h-64 space-y-3 overflow-y-auto px-2 py-6 text-center" aria-label="歌词">
+    <ol
+      ref={listRef}
+      className={cn(
+        "max-h-64 space-y-3 overflow-y-auto px-2 py-8 text-center [mask-image:linear-gradient(180deg,transparent,#000_16%,#000_84%,transparent)]",
+        className
+      )}
+      aria-label="歌词"
+    >
       {lines.map((line, index) => (
         <li
           key={`${line.time}-${index}`}

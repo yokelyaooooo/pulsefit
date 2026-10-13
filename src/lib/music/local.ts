@@ -29,9 +29,22 @@ export function searchLocal(term: string): CatalogItem[] {
 export function localPlayable(id: string): Playable | null {
   const track = tracks.find((item) => item.id === id)
   if (!track) return null
-  const hints = [track.title, track.titleEn, track.blurb, `${track.bpm} BPM`]
-  const step = track.durationSec / hints.length
-  const lyrics = hints.map((line, index) => `[${formatStamp(index * step)}]${line}`).join("\n")
+  const cues = [
+    track.title,
+    `${track.titleEn} · ${track.bpm}`,
+    "吸气，肩沉下来",
+    "一，发力",
+    "二，收回",
+    "三，稳住核心",
+    "四，换边",
+    track.blurb,
+    "组间把气吐干净",
+    "再跟四拍",
+    "节奏还在，别抢",
+    "最后一下，干净落地",
+  ]
+  const step = track.durationSec / cues.length
+  const lyrics = cues.map((line, index) => `[${formatStamp(index * step)}]${line}`).join("\n")
   return {
     ...localCatalogItem(track),
     audioUrl: null,
