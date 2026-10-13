@@ -56,7 +56,7 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
   }, [now, player])
 
   return (
-    <section className="flex h-full min-h-[70vh] flex-col px-5 py-6 sm:px-8">
+    <section className="flex w-full max-w-[430px] flex-col px-5 py-4">
       <div className="flex items-center justify-between">
         <p className="t-caption text-[color:var(--label-secondary)]">
           {now ? sourceLabel[now.source] : "燃律"}
@@ -70,8 +70,8 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      <div className="mt-4 flex flex-1 flex-col items-center">
-        <div ref={coverRef} className="relative w-full max-w-[280px] origin-center rounded-[28px]">
+      <div className="mt-3 flex flex-col items-center">
+        <div ref={coverRef} className="relative w-full max-w-[232px] origin-center rounded-[28px]">
           <VinylDisc spinning={player.status === "playing"} className="-right-[8%] size-[78%]" />
           <CoverArt
             seed={now?.id ?? "pulsefit"}
@@ -80,7 +80,7 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
             className="relative z-10 aspect-square w-full rounded-[28px]"
           />
         </div>
-        <div className="mt-5 w-full max-w-sm text-center">
+        <div className="mt-3 w-full max-w-sm text-center">
           <h2 className="t-1">{now ? now.title : "还没有在播"}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{now ? now.artist : "从首页或曲库选一首。"}</p>
         </div>
@@ -101,11 +101,11 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
           ))}
         </div>
         <div className="mt-2 w-full max-w-sm">
-          <LyricsView lines={player.lyrics} time={position} className="h-[28vh] max-h-72" />
+          <LyricsView lines={player.lyrics} time={position} className="h-40 max-h-40" />
         </div>
       </div>
 
-      <div className="space-y-5">
+      <div className="mt-3 space-y-4">
         <div>
           <Slider
             aria-label="播放进度"

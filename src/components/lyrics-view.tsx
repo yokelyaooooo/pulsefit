@@ -9,9 +9,14 @@ export function LyricsView({ lines, time, className }: { lines: LyricLine[]; tim
   const listRef = useRef<HTMLOListElement>(null)
 
   useEffect(() => {
-    const node = listRef.current?.querySelector<HTMLElement>("[data-active='true']")
-    node?.scrollIntoView({ block: "center", behavior: "smooth" })
-  }, [active])
+    const list = listRef.current
+    const node = list?.querySelector<HTMLElement>("[data-active='true']")
+    if (!list || !node) return
+    const listTop = list.getBoundingClientRect().top
+    const lineTop = node.getBoundingClientRect().top
+    const next = list.scrollTop + (lineTop - listTop) - list.clientHeight / 2 + node.clientHeight / 2
+    list.scrollTo({ top: Math.max(0, next) })
+  }, [active, lines])
 
   if (lines.length === 0) {
     return <p className="px-6 text-center text-sm text-muted-foreground">这首没有逐行歌词。</p>
@@ -21,7 +26,7 @@ export function LyricsView({ lines, time, className }: { lines: LyricLine[]; tim
     <ol
       ref={listRef}
       className={cn(
-        "max-h-64 space-y-3 overflow-y-auto px-2 py-8 text-center [mask-image:linear-gradient(180deg,transparent,#000_16%,#000_84%,transparent)]",
+        "max-h-64 space-y-3 overflow-y-auto px-2 py-6 text-center [mask-image:linear-gradient(180deg,transparent,#000_8%,#000_92%,transparent)]",
         className
       )}
       aria-label="歌词"

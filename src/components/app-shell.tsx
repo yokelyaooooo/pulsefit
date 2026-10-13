@@ -116,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {open && !onPlayRoute ? (
-        <div className="fixed inset-0 z-40 overflow-y-auto bg-[#f2f2f7]/88 backdrop-blur-2xl lg:hidden">
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-[#f2f2f7] lg:hidden">
           <NowPlaying onClose={() => setOpen(false)} />
         </div>
       ) : null}
