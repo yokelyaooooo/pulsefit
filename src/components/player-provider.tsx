@@ -12,6 +12,12 @@ import {
 } from "react"
 import { getPlan, getTrack, tracks } from "@/lib/catalog"
 import { PulseEngine, type EngineSnapshot } from "@/lib/audio/engine"
+import { applePause, applePlay, appleResume, appleSeek, appleTransport } from "@/lib/music/apple"
+import { parseLrc, type LyricLine } from "@/lib/music/lrc"
+import { localPlayable, recallCatalog, recallPlayable, rememberPlayable } from "@/lib/music/local"
+import { resolvePlayback } from "@/lib/music/resolve"
+import type { MusicSource, Playable } from "@/lib/music/types"
+import { getMusicSnapshot } from "@/lib/music/config"
 import {
   getPersistedSnapshot,
   getServerPersistedSnapshot,
@@ -20,6 +26,15 @@ import {
 } from "@/lib/storage"
 import type { SessionRecord, WorkoutClock } from "@/lib/types"
 import { phaseAt } from "@/lib/workout"
+
+export interface NowMeta {
+  id: string
+  title: string
+  artist: string
+  artwork: string | null
+  source: MusicSource
+  bpm: number
+}
 
 type Status = "idle" | "playing" | "paused"
 
@@ -46,7 +61,12 @@ interface PlayerContextValue {
   error: string | null
   audioLocked: boolean
   loop: boolean
+  now: NowMeta | null
+  lyrics: LyricLine[]
+  notice: string | null
   playTrack: (id: string, options?: PlayOptions) => Promise<boolean>
+  playItem: (item: Playable, queueItems?: Playable[]) => Promise<boolean>
+  dismissNotice: () => void
   toggle: () => Promise<void>
   next: () => Promise<void>
   prev: () => Promise<void>
@@ -77,6 +97,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const clockGen = useRef(0)
   const phaseRef = useRef<"work" | "rest" | null>(null)
   const nextRef = useRef<() => Promise<void>>(async () => {})
+  const modeRef = useRef<"engine" | "audio" | "apple">("engine")
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const bpmRef = useRef(128)
 
   const [status, setStatus] = useState<Status>("idle")
   const [trackId, setTrackId] = useState<string | null>(null)
@@ -98,6 +121,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [audioLocked, setAudioLocked] = useState(false)
   const [loop, setLoop] = useState(false)
+  const [now, setNow] = useState<NowMeta | null>(null)
+  const [lyrics, setLyrics] = useState<LyricLine[]>([])
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     trackIdRef.current = trackId
@@ -148,16 +174,36 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [pushSession]
   )
 
+  const showTrack = useCallback((meta: NowMeta, lyricText: string, note: string | null, duration: number) => {
+    setTrackId(meta.id)
+    trackIdRef.current = meta.id
+    setNow(meta)
+    setLyrics(parseLrc(lyricText))
+    setNotice(note)
+    setBpmState(meta.bpm)
+    bpmRef.current = meta.bpm
+    setPositionSec(0)
+    setDurationSec(duration)
+  }, [])
+
   const playTrack = useCallback(async (id: string, options?: PlayOptions) => {
     const track = getTrack(id)
-    const engine = engineRef.current
-    if (!track || !engine) {
-      setError("这首曲子不在曲库里。")
-      return false
+    let remote = track ? null : recallPlayable(id)
+    if (!track && !remote) {
+      const catalogItem = recallCatalog(id)
+      if (!catalogItem || catalogItem.source === "local") {
+        setError("这首曲子还没准备好。")
+        return false
+      }
+      try {
+        remote = await resolvePlayback(catalogItem, getMusicSnapshot())
+        rememberPlayable(remote)
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "这首外部曲目没有解析成功。")
+        return false
+      }
     }
     const nextQueue = options?.queue?.length ? options.queue : queueRef.current
-    const nextBpm = options?.bpm ?? track.bpm
-    const nextEnergy = options?.energy ?? track.energy
     if (options?.loop !== undefined) {
       loopRef.current = options.loop
       setLoop(options.loop)
@@ -165,31 +211,119 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setQueue(nextQueue)
     queueRef.current = nextQueue
     setError(null)
-    engine.load({
-      patternId: track.patternId,
-      bpm: nextBpm,
-      energy: nextEnergy,
-      durationSec: track.durationSec,
-    })
-    setTrackId(id)
-    trackIdRef.current = id
-    setBpmState(nextBpm)
-    setEnergyState(nextEnergy)
-    setPositionSec(0)
-    setDurationSec(track.durationSec)
+
+    if (track) {
+      const engine = engineRef.current
+      if (!engine) return false
+      audioRef.current?.pause()
+      void applePause()
+      modeRef.current = "engine"
+      const nextBpm = options?.bpm ?? track.bpm
+      const nextEnergy = options?.energy ?? track.energy
+      engine.load({
+        patternId: track.patternId,
+        bpm: nextBpm,
+        energy: nextEnergy,
+        durationSec: track.durationSec,
+      })
+      const playable = localPlayable(track.id)
+      showTrack(
+        {
+          id,
+          title: track.title,
+          artist: "燃律 PulseFit",
+          artwork: null,
+          source: "local",
+          bpm: nextBpm,
+        },
+        playable?.lyricsText ?? "",
+        null,
+        track.durationSec
+      )
+      setEnergyState(nextEnergy)
+      try {
+        await engine.resume()
+        engine.play()
+        setStatus("playing")
+        setAudioLocked(false)
+        return true
+      } catch {
+        setStatus("paused")
+        setAudioLocked(true)
+        setError("浏览器拦住了声音。再点一次播放。")
+        return false
+      }
+    }
+
+    const item = remote
+    if (!item) return false
+    engineRef.current?.pause()
+    const bpm = options?.bpm ?? item.bpm ?? bpmRef.current
+    showTrack(
+      {
+        id: item.id,
+        title: item.title,
+        artist: item.artist,
+        artwork: item.artwork,
+        source: item.source,
+        bpm,
+      },
+      item.lyricsText,
+      item.note,
+      item.durationSec || 30
+    )
+
+    if (item.source === "apple") {
+      audioRef.current?.pause()
+      modeRef.current = "apple"
+      try {
+        await applePlay(getMusicSnapshot().appleToken, item.nativeId)
+        setStatus("playing")
+        setAudioLocked(false)
+        return true
+      } catch (caught) {
+        setStatus("paused")
+        setError(caught instanceof Error ? caught.message : "Apple Music 没有开始播放。")
+        return false
+      }
+    }
+
+    if (!item.audioUrl) {
+      modeRef.current = "engine"
+      setStatus("paused")
+      setError(item.note || "这个音源没有返回可播放地址。")
+      return false
+    }
+
+    const audio = audioRef.current
+    if (!audio) return false
+    modeRef.current = "audio"
+    void applePause()
+    audio.src = item.audioUrl
+    audio.volume = getPersistedSnapshot().volume
     try {
-      await engine.resume()
-      engine.play()
+      await audio.play()
       setStatus("playing")
       setAudioLocked(false)
+      if (Number.isFinite(audio.duration) && audio.duration > 0) setDurationSec(audio.duration)
       return true
     } catch {
       setStatus("paused")
       setAudioLocked(true)
-      setError("浏览器拦住了声音。再点一次播放。")
+      setError("浏览器拦住了这首外部音频。再点一次播放。")
       return false
     }
-  }, [])
+  }, [showTrack])
+
+  const playItem = useCallback(
+    async (item: Playable, queueItems?: Playable[]) => {
+      rememberPlayable(item)
+      const queue = queueItems?.length ? queueItems : [item]
+      queue.forEach(rememberPlayable)
+      return playTrack(item.id, { queue: queue.map((entry) => entry.id), bpm: item.bpm ?? undefined })
+    },
+    [playTrack]
+  )
 
   const next = useCallback(async () => {
     const currentId = trackIdRef.current
@@ -202,6 +336,25 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return
     }
     if (loopRef.current) {
+      if (modeRef.current === "audio" && audioRef.current) {
+        audioRef.current.currentTime = 0
+        try {
+          await audioRef.current.play()
+          setStatus("playing")
+          setPositionSec(0)
+        } catch {
+          setAudioLocked(true)
+          setError("浏览器拦住了这首外部音频。再点一次播放。")
+        }
+        return
+      }
+      if (modeRef.current === "apple") {
+        await appleSeek(0)
+        await appleResume()
+        setStatus("playing")
+        setPositionSec(0)
+        return
+      }
       const engine = engineRef.current
       engine?.seek(0)
       try {
@@ -230,10 +383,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       void nextRef.current()
     }
     engine.setVolume(getPersistedSnapshot().volume)
+    const audio = new Audio()
+    audio.preload = "auto"
+    audio.onended = () => {
+      void nextRef.current()
+    }
+    audioRef.current = audio
     return () => {
       engine.onEnded = null
       engine.dispose()
       engineRef.current = null
+      audio.pause()
+      audio.src = ""
+      audioRef.current = null
     }
   }, [])
 
@@ -243,18 +405,63 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     engineRef.current?.setVolume(volume)
+    if (audioRef.current) audioRef.current.volume = volume
   }, [volume])
 
   useEffect(() => {
     let frame = 0
     let last = 0
-    const loopFrame = (now: number) => {
-      const snapshot = engineRef.current?.getSnapshot()
-      if (snapshot) {
-        listeners.current.forEach((listener) => listener(snapshot))
-        if (snapshot.playing && now - last > 250) {
-          last = now
-          setPositionSec(snapshot.positionSec)
+    const loopFrame = (stamp: number) => {
+      const mode = modeRef.current
+      if (mode === "audio" && audioRef.current) {
+        const audio = audioRef.current
+        const position = audio.currentTime || 0
+        const beat = (position * (bpmRef.current / 60)) % 1
+        listeners.current.forEach((listener) =>
+          listener({
+            positionSec: position,
+            bpm: bpmRef.current,
+            playing: !audio.paused,
+            step: Math.floor(beat * 16) % 16,
+            beatPhase: beat,
+            kick: !audio.paused && beat < 0.08,
+            energy: 0.7,
+            durationSec: Number.isFinite(audio.duration) ? audio.duration : 0,
+          })
+        )
+        if (stamp - last > 250) {
+          last = stamp
+          setPositionSec(position)
+          if (Number.isFinite(audio.duration) && audio.duration > 0) setDurationSec(audio.duration)
+        }
+      } else if (mode === "apple") {
+        const transport = appleTransport()
+        const beat = (transport.position * (bpmRef.current / 60)) % 1
+        listeners.current.forEach((listener) =>
+          listener({
+            positionSec: transport.position,
+            bpm: bpmRef.current,
+            playing: transport.playing,
+            step: Math.floor(beat * 16) % 16,
+            beatPhase: beat,
+            kick: transport.playing && beat < 0.08,
+            energy: 0.7,
+            durationSec: transport.duration,
+          })
+        )
+        if (stamp - last > 250) {
+          last = stamp
+          setPositionSec(transport.position)
+          if (transport.duration > 0) setDurationSec(transport.duration)
+        }
+      } else {
+        const snapshot = engineRef.current?.getSnapshot()
+        if (snapshot) {
+          listeners.current.forEach((listener) => listener(snapshot))
+          if (snapshot.playing && stamp - last > 250) {
+            last = stamp
+            setPositionSec(snapshot.positionSec)
+          }
         }
       }
       frame = window.requestAnimationFrame(loopFrame)
@@ -293,6 +500,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(timer)
   }, [workout?.running, workout?.planId, workout?.clockEpoch, finishWorkout])
 
+  const holdWorkout = useCallback((running: boolean) => {
+    setWorkout((current) =>
+      current
+        ? running
+          ? { ...current, running: true, elapsedSec: elapsedRef.current, clockEpoch: current.clockEpoch + 1 }
+          : { ...current, running: false, elapsedSec: elapsedRef.current }
+        : current
+    )
+  }, [])
+
   const toggle = useCallback(async () => {
     const engine = engineRef.current
     if (!engine) return
@@ -300,13 +517,49 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       await playTrack(tracks[0].id)
       return
     }
+    if (modeRef.current === "audio" && audioRef.current) {
+      const audio = audioRef.current
+      if (!audio.paused) {
+        audio.pause()
+        setStatus("paused")
+        setPositionSec(audio.currentTime)
+        holdWorkout(false)
+        return
+      }
+      try {
+        await audio.play()
+        setStatus("playing")
+        setAudioLocked(false)
+        setError(null)
+        holdWorkout(true)
+      } catch {
+        setAudioLocked(true)
+        setError("浏览器拦住了这首外部音频。再点一次播放。")
+      }
+      return
+    }
+    if (modeRef.current === "apple") {
+      if (appleTransport().playing) {
+        await applePause()
+        setStatus("paused")
+        holdWorkout(false)
+        return
+      }
+      try {
+        await appleResume()
+        setStatus("playing")
+        setError(null)
+        holdWorkout(true)
+      } catch {
+        setError("Apple Music 没有继续播放。")
+      }
+      return
+    }
     if (status === "playing") {
       engine.pause()
       setStatus("paused")
       setPositionSec(engine.getPosition())
-      setWorkout((current) =>
-        current ? { ...current, running: false, elapsedSec: elapsedRef.current } : current
-      )
+      holdWorkout(false)
       return
     }
     try {
@@ -315,21 +568,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setStatus("playing")
       setAudioLocked(false)
       setError(null)
-      setWorkout((current) =>
-        current
-          ? {
-              ...current,
-              running: true,
-              elapsedSec: elapsedRef.current,
-              clockEpoch: current.clockEpoch + 1,
-            }
-          : current
-      )
+      holdWorkout(true)
     } catch {
       setAudioLocked(true)
       setError("浏览器拦住了声音。再点一次播放。")
     }
-  }, [playTrack, status])
+  }, [holdWorkout, playTrack, status])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -350,8 +594,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const prev = useCallback(async () => {
     const engine = engineRef.current
-    if (engine && engine.getPosition() > 2) {
-      engine.seek(0)
+    const position =
+      modeRef.current === "audio"
+        ? (audioRef.current?.currentTime ?? 0)
+        : modeRef.current === "apple"
+          ? appleTransport().position
+          : (engine?.getPosition() ?? 0)
+    if (position > 2) {
+      if (modeRef.current === "audio" && audioRef.current) audioRef.current.currentTime = 0
+      else if (modeRef.current === "apple") await appleSeek(0)
+      else engine?.seek(0)
       setPositionSec(0)
       return
     }
@@ -364,13 +616,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [playTrack])
 
   const seek = useCallback((sec: number) => {
-    engineRef.current?.seek(sec)
+    if (modeRef.current === "audio" && audioRef.current) audioRef.current.currentTime = sec
+    else if (modeRef.current === "apple") void appleSeek(sec)
+    else engineRef.current?.seek(sec)
     setPositionSec(sec)
   }, [])
 
   const setBpm = useCallback((value: number) => {
-    engineRef.current?.setBpm(value)
+    bpmRef.current = value
+    if (modeRef.current === "engine") engineRef.current?.setBpm(value)
     setBpmState(value)
+    setNow((current) => (current ? { ...current, bpm: value } : current))
   }, [])
 
   const setEnergy = useCallback((value: number) => {
@@ -476,6 +732,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const clearSessions = useCallback(() => updatePersisted({ sessions: [] }), [])
   const dismissSummary = useCallback(() => setSummary(null), [])
+  const dismissNotice = useCallback(() => setNotice(null), [])
 
   const subscribeVisual = useCallback((listener: (snapshot: EngineSnapshot) => void) => {
     listeners.current.add(listener)
@@ -499,7 +756,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       error,
       audioLocked,
       loop,
+      now,
+      lyrics,
+      notice,
       playTrack,
+      playItem,
+      dismissNotice,
       toggle,
       next,
       prev,
@@ -531,7 +793,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       error,
       audioLocked,
       loop,
+      now,
+      lyrics,
+      notice,
       playTrack,
+      playItem,
+      dismissNotice,
       toggle,
       next,
       prev,

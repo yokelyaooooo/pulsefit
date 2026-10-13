@@ -49,9 +49,19 @@ function formatStamp(seconds: number) {
 }
 
 const remembered = new Map<string, Playable>()
+const catalogMemory = new Map<string, CatalogItem>()
 
 export function rememberPlayable(item: Playable) {
   remembered.set(item.id, item)
+  catalogMemory.set(item.id, item)
+}
+
+export function rememberCatalog(items: CatalogItem[]) {
+  items.forEach((item) => catalogMemory.set(item.id, item))
+}
+
+export function recallCatalog(id: string) {
+  return catalogMemory.get(id) ?? localPlayable(id) ?? undefined
 }
 
 export function recallPlayable(id: string) {

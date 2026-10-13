@@ -1,26 +1,17 @@
 "use client"
 
-import { useEffect, useState, useSyncExternalStore } from "react"
+import { useEffect, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Activity, Dumbbell, Flame, Flower2, Moon, Play } from "lucide-react"
+import { Play } from "lucide-react"
+import { CoverArt } from "@/components/cover-art"
 import { usePlayer } from "@/components/player-provider"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { getPlan, plans, suggestedPlanId, tagLabel, tracks } from "@/lib/catalog"
+import { getPlan, plans, suggestedPlanId, tracks } from "@/lib/catalog"
 import { hydratePersisted } from "@/lib/storage"
-import type { WorkoutTag } from "@/lib/types"
+import { focuses } from "@/lib/training/focus"
 import { formatClock } from "@/lib/audio/clock"
 import { planDuration } from "@/lib/workout"
-
-const icons: Record<WorkoutTag, typeof Flame> = {
-  hiit: Flame,
-  strength: Dumbbell,
-  cardio: Activity,
-  yoga: Flower2,
-  recover: Moon,
-}
 
 const serverClock = {
   planId: "hiit",
@@ -60,8 +51,7 @@ export function HomeScreen() {
   const router = useRouter()
   const player = usePlayer()
   const clock = useSyncExternalStore(subscribeClock, getClockSnapshot, getServerClockSnapshot)
-  const suggested = clock.planId
-  const line = clock.line
+  const plan = getPlan(clock.planId) ?? plans[0]
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -69,113 +59,114 @@ export function HomeScreen() {
       hydratePersisted()
     })
   }, [])
-  const [chosen, setChosen] = useState<string | null>(null)
-  const plan = getPlan(chosen ?? suggested) ?? plans[0]
-  const Icon = icons[plan.tag]
 
-  async function begin(id: string) {
-    await player.startWorkout(id)
-    router.push("/session")
-  }
+  const days = focuses.filter((focus) => focus.kind === "day")
+  const lifts = focuses.filter((focus) => focus.kind === "lift")
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-8">
       <header>
-        <p className="text-xs tracking-[0.28em] text-ember uppercase">PulseFit</p>
-        <h1 className="mt-1 text-4xl font-semibold tracking-tight">燃律</h1>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{line}</p>
+        <h1 className="text-4xl font-semibold tracking-tight">燃律</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{clock.line}</p>
       </header>
 
-      <Card className="overflow-hidden bg-[linear-gradient(160deg,rgba(255,77,26,0.18),rgba(255,197,109,0.05)_42%,transparent)]">
-          <CardContent className="space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <Badge variant="secondary">{tagLabel[plan.tag]}</Badge>
-                <h2 className="mt-3 text-2xl font-semibold">{plan.name}</h2>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{plan.blurb}</p>
-              </div>
-              <Icon className="size-8 text-ember" />
-            </div>
-            <p className="text-sm text-gold tabular-nums">
-              {plan.bpm} BPM · {formatClock(planDuration(plan))}
-              {plan.rounds > 1 ? ` · ${plan.rounds} 轮` : ""}
-            </p>
-            <Button className="h-11 rounded-full px-5" onClick={() => void begin(plan.id)}>
-              <Play />
-              开始这轮
-            </Button>
-          </CardContent>
-        </Card>
+      <Link
+        href="/search"
+        className="glass block rounded-2xl px-4 py-3 text-sm text-muted-foreground"
+      >
+        搜索训练日、动作或歌曲
+      </Link>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground">换一种练法</h2>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {plans.map((item) => {
-            const ItemIcon = icons[item.tag]
-            const active = item.id === plan.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setChosen(item.id)}
-                className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm ${
-                  active ? "border-ember bg-ember/15 text-foreground" : "border-white/10 text-muted-foreground"
-                }`}
-              >
-                <ItemIcon className="size-4" />
-                {item.name}
-              </button>
-            )
-          })}
+      <section>
+        <div className="mb-3 flex items-end justify-between">
+          <h2 className="text-xl font-semibold">训练日</h2>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {days.map((focus) => (
+            <Link
+              key={focus.id}
+              href={`/focus/${focus.id}`}
+              className="w-40 shrink-0 rounded-3xl p-4 text-left shadow-lg"
+              style={{ background: `linear-gradient(160deg, ${focus.accent}, ${focus.ink})`, color: "white" }}
+            >
+              <div className="text-lg font-semibold">{focus.name}</div>
+              <div className="mt-6 text-xs opacity-80">{focus.targetBpm} BPM</div>
+            </Link>
+          ))}
         </div>
       </section>
 
-      {player.sessions[0] ? (
-        <section className="space-y-2">
-          <h2 className="text-sm font-medium text-muted-foreground">上次</h2>
-          <button
-            type="button"
-            className="flex w-full items-center justify-between rounded-2xl bg-card px-4 py-3 text-left ring-1 ring-white/8"
-            onClick={() => void begin(player.sessions[0].planId)}
-          >
-            <span>
-              <span className="block font-medium">{player.sessions[0].planName}</span>
-              <span className="text-xs text-muted-foreground">
-                {player.sessions[0].finished ? "已完成" : "提前结束"} · {formatClock(player.sessions[0].durationSec)}
-              </span>
-            </span>
-            <span className="text-sm text-ember">再来一轮</span>
-          </button>
-        </section>
-      ) : null}
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">动作</h2>
+        <div className="grid grid-cols-3 gap-2">
+          {lifts.map((focus) => (
+            <Link
+              key={focus.id}
+              href={`/focus/${focus.id}`}
+              className="rounded-2xl px-3 py-4 text-sm font-medium"
+              style={{ background: `linear-gradient(180deg, ${focus.accent}, ${focus.ink})`, color: "white" }}
+            >
+              {focus.name}
+            </Link>
+          ))}
+        </div>
+      </section>
 
-      <section className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">现在就能放</h2>
-          <Link href="/library" className="text-xs text-ember">
-            全部曲目
+      <section>
+        <div className="mb-3 flex items-end justify-between">
+          <h2 className="text-xl font-semibold">本地专辑</h2>
+          <Link href="/library" className="text-xs text-muted-foreground">
+            全部
           </Link>
         </div>
-        <ul className="space-y-2">
-          {tracks.slice(0, 4).map((track) => (
-            <li key={track.id}>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-2xl bg-card px-4 py-3 text-left ring-1 ring-white/8"
-                onClick={() => void player.playTrack(track.id, { queue: tracks.map((item) => item.id), loop: false })}
-              >
-                <span>
-                  <span className="block font-medium">
-                    {track.title}
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">{track.titleEn}</span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">{track.blurb}</span>
-                </span>
-                <span className="text-sm text-gold tabular-nums">{track.bpm}</span>
-              </button>
-            </li>
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {tracks.map((track) => (
+            <button
+              key={track.id}
+              type="button"
+              className="w-36 shrink-0 text-left"
+              onClick={() => void player.playTrack(track.id, { queue: tracks.map((item) => item.id) })}
+            >
+              <CoverArt seed={track.id} title={track.title} className="aspect-square w-full rounded-2xl" />
+              <div className="mt-2 truncate text-sm font-medium">{track.title}</div>
+              <div className="truncate text-xs text-muted-foreground">{track.bpm} BPM</div>
+            </button>
           ))}
-        </ul>
+        </div>
+      </section>
+
+      <section className="glass rounded-3xl p-4">
+        <p className="text-xs tracking-[0.18em] text-[var(--theme-a)] uppercase">间歇</p>
+        <h2 className="mt-2 text-2xl font-semibold">{plan.name}</h2>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{plan.blurb}</p>
+        <p className="mt-3 text-xs text-muted-foreground tabular-nums">
+          {plan.bpm} BPM · {formatClock(planDuration(plan))}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {plans.map((item) => (
+            <Button
+              key={item.id}
+              size="sm"
+              variant={item.id === plan.id ? "default" : "secondary"}
+              onClick={() => {
+                clockSnapshot = { ...clockSnapshot, planId: item.id }
+                clockListeners.forEach((listener) => listener())
+              }}
+            >
+              {item.name}
+            </Button>
+          ))}
+        </div>
+        <Button
+          className="mt-4 w-full"
+          onClick={() => {
+            void player.startWorkout(plan.id)
+            router.push("/session")
+          }}
+        >
+          <Play />
+          开始这轮
+        </Button>
       </section>
     </div>
   )

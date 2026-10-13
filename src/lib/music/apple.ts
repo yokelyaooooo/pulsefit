@@ -1,23 +1,6 @@
 import { readApplePlaylistTracks, readApplePlaylists, readAppleSongs } from "@/lib/music/parse"
 import type { CatalogItem, PlaylistItem } from "@/lib/music/types"
 
-interface AppleArtwork {
-  url?: string
-}
-
-interface AppleSongAttributes {
-  name?: string
-  artistName?: string
-  albumName?: string
-  durationInMillis?: number
-  artwork?: AppleArtwork
-}
-
-interface AppleResource {
-  id?: string
-  attributes?: AppleSongAttributes
-}
-
 interface AppleInstance {
   authorize: () => Promise<string>
   unauthorize: () => Promise<void>

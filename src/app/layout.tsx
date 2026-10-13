@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "燃律 PulseFit",
-  description: "把训练节拍锁进音乐里。间歇、力量、有氧和恢复，同一套播放器。",
+  description: "燃律 PulseFit。训练日歌单、本地节拍，以及网易云、QQ 音乐和 Apple Music。训记用来记组数和部位。",
   applicationName: "燃律",
   manifest: "/manifest.webmanifest",
   appleWebApp: {

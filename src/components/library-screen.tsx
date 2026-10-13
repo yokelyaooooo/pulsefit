@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { CoverArt } from "@/components/cover-art"
 import { usePersistedStore } from "@/components/use-persisted-store"
 import { Heart, Pause, Play } from "lucide-react"
 import { usePlayer } from "@/components/player-provider"
@@ -86,6 +87,7 @@ export function LibraryScreen() {
             const saved = player.favorites.includes(track.id)
             return (
               <li key={track.id} className="flex items-center gap-2 rounded-2xl bg-card px-3 py-3 ring-1 ring-white/8">
+                <CoverArt seed={track.id} title={track.title} className="size-12 rounded-xl" />
                 <button
                   type="button"
                   className="min-w-0 flex-1 text-left"
