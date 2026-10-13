@@ -1,18 +1,14 @@
+import { builtinExercises } from "@/lib/trainlog/exercises"
 import { cn } from "@/lib/utils"
 
-const palette = ["#FF3B30", "#FF9500", "#FF9F0A", "#34C759", "#00C7BE", "#32ADE6", "#007AFF", "#5856D6", "#AF52DE"]
+const known = new Set(builtinExercises.map((exercise) => exercise.id))
 
-function tint(glyph: string) {
-  const hash = Array.from(glyph).reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  return palette[hash % palette.length]
-}
-
-export function ExerciseIcon({ glyph, className }: { glyph: string; className?: string }) {
-  const color = tint(glyph)
+export function ExerciseIcon({ exerciseId, className }: { exerciseId: string; className?: string }) {
+  const file = known.has(exerciseId) ? exerciseId : "generic"
   return (
-    <svg viewBox="0 0 32 32" className={cn("shrink-0", className)} aria-hidden>
-      <rect width="32" height="32" rx="9" fill={color} opacity="0.14" />
-      <path d={glyph} fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <span className={cn("inline-grid shrink-0 place-items-center overflow-hidden rounded-[10px] bg-white shadow-[inset_0_0_0_0.5px_rgba(0,0,0,0.06)]", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/exercises/${file}.svg`} alt="" className="size-[88%] object-contain" />
+    </span>
   )
 }

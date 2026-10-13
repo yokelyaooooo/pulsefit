@@ -18,6 +18,14 @@ npm test
 npm run lint
 ```
 
+## 图像
+
+卡片和封面用的是健身房、器械和专辑气质的照片，上面压了一层深色渐变，字才能读清。来源和许可在 [public/photos/ATTRIBUTION.md](public/photos/ATTRIBUTION.md)。本地曲子的封面是这些开放图片，不是商业专辑。
+
+动作图标是仓库里自己画的人体剪影：椭圆形空白头部，没有五官，也不是真人照片。生成脚本是 `scripts/build-exercise-figures.mjs`。看过 Everkinetic（CC BY-SA，线稿带五官）和 free-exercise-db（维护者没有为照片授予可核验的许可），这两套都没有放进仓库。
+
+肌肉图用的是 [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter) 的解剖轮廓（MIT，Copyright (c) 2022 ELABBASSI Hicham）。正面和背面分开上色，头部没有五官。许可全文在 [src/lib/trainlog/ANATOMY.md](src/lib/trainlog/ANATOMY.md)。
+
 ## 界面
 
 - 首页是训练日、动作和本地专辑。底部是玻璃标签栏，正在播放时上面还有一条迷你播放器。

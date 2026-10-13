@@ -60,7 +60,7 @@ export function TrainLibraryScreen() {
               <div className="flex">
                 {plan.exerciseIds.slice(0, 3).map((id) => {
                   const exercise = builtinExercises.find((item) => item.id === id)
-                  return exercise ? <ExerciseIcon key={id} glyph={exercise.glyph} className="size-8 bg-white/85" /> : null
+                  return exercise ? <ExerciseIcon key={id} exerciseId={exercise.id} className="size-8" /> : null
                 })}
               </div>
             </Paint>
@@ -103,7 +103,7 @@ export function TrainLibraryScreen() {
                   setPlanExercises((current) => (on ? current.filter((id) => id !== exercise.id) : [...current, exercise.id]))
                 }
               >
-                <ExerciseIcon glyph={exercise.glyph} className="size-6" />
+                <ExerciseIcon exerciseId={exercise.id} className="size-6" />
                 {exercise.name}
               </button>
             )
@@ -135,7 +135,7 @@ export function TrainLibraryScreen() {
         <ul className="space-y-2">
           {exercises.map((exercise) => (
             <li key={exercise.id} className="ios-row flex items-center gap-3 px-2 py-2">
-              <ExerciseIcon glyph={exercise.glyph} className="size-10" />
+              <ExerciseIcon exerciseId={exercise.id} className="size-10" />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{exercise.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{exercise.muscles.map((id) => muscleLabel[id]).join(" · ")}</div>

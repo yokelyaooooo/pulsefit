@@ -32,11 +32,11 @@ export function TrainHistoryScreen() {
         {logs.map((log) => {
           const volume = Math.round(logVolumeKg(log))
           const kcal = estimateKcal(volume, logCardioSeconds(log), log.durationSec)
-          const glyph = getBuiltinExercise(log.exercises[0]?.exerciseId ?? "")?.glyph
+          const exerciseId = getBuiltinExercise(log.exercises[0]?.exerciseId ?? "")?.id ?? log.exercises[0]?.exerciseId
           return (
             <li key={log.id} className="ios-row flex items-center gap-3 px-2.5 py-2.5">
               <Paint tone={log.focusId ?? "strength"} className="grid size-14 shrink-0 place-items-center rounded-[14px]">
-                {glyph ? <ExerciseIcon glyph={glyph} className="relative size-9 bg-white/80" /> : null}
+                {exerciseId ? <ExerciseIcon exerciseId={exerciseId} className="relative size-9" /> : null}
               </Paint>
               <div className="min-w-0">
                 <div className="t-headline truncate">{log.title}</div>

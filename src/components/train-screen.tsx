@@ -170,7 +170,7 @@ export function TrainScreen() {
                   <span className="absolute top-3 left-3 flex">
                     {plan.exerciseIds.slice(0, 3).map((id) => {
                       const exercise = getBuiltinExercise(id)
-                      return exercise ? <ExerciseIcon key={id} glyph={exercise.glyph} className="size-8 rounded-[8px] bg-white/85" /> : null
+                      return exercise ? <ExerciseIcon key={id} exerciseId={exercise.id} className="size-8 rounded-[8px]" /> : null
                     })}
                   </span>
                   <span className="t-headline relative">{plan.name}</span>
@@ -234,7 +234,7 @@ export function TrainScreen() {
               .map((exercise) => (
                 <li key={exercise.id}>
                   <button type="button" className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-black/4" onClick={() => addExercise(exercise.id)}>
-                    <ExerciseIcon glyph={exercise.glyph} className="size-9" />
+                    <ExerciseIcon exerciseId={exercise.id} className="size-9" />
                     <span>
                       <span className="block text-sm font-medium">{exercise.name}</span>
                       <span className="block text-xs text-muted-foreground">{exercise.muscles.map((id) => muscleLabel[id]).join(" · ")}</span>
@@ -277,7 +277,7 @@ function LogEditor({
         return (
           <section key={exercise.id} className="border-b border-black/6 py-3 last:border-0">
             <div className="flex items-center gap-3">
-              <ExerciseIcon glyph={def?.glyph ?? "M6 16h20M16 6v20"} className="size-10" />
+              <ExerciseIcon exerciseId={def?.id ?? exercise.exerciseId} className="size-10" />
               <h3 className="t-headline">{exercise.name}</h3>
             </div>
             <ul className="mt-3 space-y-2">
@@ -341,7 +341,7 @@ function Summary({ log }: { log: WorkoutLog }) {
         {log.exercises.map((exercise) => (
           <div key={exercise.id}>
             <div className="flex items-center gap-2.5">
-              <ExerciseIcon glyph={findExercise(getTrainSnapshot(), exercise.exerciseId)?.glyph ?? "M6 16h20M16 6v20"} className="size-9" />
+              <ExerciseIcon exerciseId={exercise.exerciseId} className="size-9" />
               <h3 className="t-headline">{exercise.name}</h3>
             </div>
             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">

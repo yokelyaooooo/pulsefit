@@ -123,7 +123,6 @@ export function HomeScreen() {
         <h2 className="t-2 mb-3">间歇</h2>
         <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
           {plans.map((item) => {
-            const art = getTrack(item.trackId)
             const selected = item.id === plan.id
             return (
               <button
@@ -139,9 +138,6 @@ export function HomeScreen() {
                 }}
               >
                 <Paint tone={item.tag} className="relative h-[148px] p-3.5">
-                  {art ? (
-                    <CoverArt seed={art.id} title={art.title} className="absolute inset-0 size-full opacity-35" />
-                  ) : null}
                   <span className="t-caption relative text-white/85">{formatClock(planDuration(item))}</span>
                   <span className="t-headline relative mt-6 block">{item.name}</span>
                   <span className="t-caption relative text-white/80">{item.bpm} BPM</span>

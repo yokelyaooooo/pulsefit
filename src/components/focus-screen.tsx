@@ -8,6 +8,7 @@ import { CoverArt } from "@/components/cover-art"
 import { usePlayer } from "@/components/player-provider"
 import { Button } from "@/components/ui/button"
 import { tracks } from "@/lib/catalog"
+import { plateFor } from "@/lib/media"
 import { getFocus } from "@/lib/training/focus"
 import { playlistFor, recommendIds } from "@/lib/training/recommend"
 import {
@@ -53,11 +54,10 @@ export function FocusScreen() {
 
   return (
     <div className="space-y-6">
-      <header
-        className="relative overflow-hidden rounded-[22px] p-5 text-white shadow-[0_14px_30px_rgba(28,28,30,0.12)]"
-        style={{ background: `linear-gradient(155deg, ${focus.accent2}, ${focus.accent} 68%)` }}
-      >
-        <span className="pointer-events-none absolute -top-10 -right-8 size-32 rounded-full bg-white/25" />
+      <header className="relative overflow-hidden rounded-[22px] p-5 text-white shadow-[0_14px_30px_rgba(28,28,30,0.16)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={plateFor(focus.id)} alt="" className="absolute inset-0 size-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
         <p className="t-caption relative text-white/80">{focus.kind === "day" ? "训练日" : "动作"}</p>
         <h1 className="t-large relative mt-1">{focus.name}</h1>
         <p className="t-sub relative mt-2 text-white/90">{focus.blurb}</p>
