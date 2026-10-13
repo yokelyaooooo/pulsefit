@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "燃律 PulseFit" },
+    { "name": "ability_desc", "value": "打开燃律" },
+    { "name": "EntryAbility_label", "value": "燃律" }
+  ]
+}

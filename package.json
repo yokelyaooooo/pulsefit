@@ -10,6 +10,10 @@
     "test": "node --experimental-strip-types --test src/lib/workout.test.ts src/lib/music/*.test.ts src/lib/training/*.test.ts src/lib/trainlog/*.test.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "lucide-react": "^1.55.0",
