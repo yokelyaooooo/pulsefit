@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port 41731 --hostname 0.0.0.0",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/lib/workout.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/workout.test.ts src/lib/music/*.test.ts src/lib/training/*.test.ts src/lib/trainlog/*.test.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

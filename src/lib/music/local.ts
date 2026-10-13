@@ -1,0 +1,59 @@
+import { tracks } from "@/lib/catalog"
+import type { Track } from "@/lib/types"
+import type { CatalogItem, Playable } from "@/lib/music/types"
+
+export function localCatalogItem(track: Track): CatalogItem {
+  return {
+    id: track.id,
+    source: "local",
+    nativeId: track.id,
+    title: track.title,
+    artist: "燃律 PulseFit",
+    album: track.titleEn,
+    artwork: null,
+    durationSec: track.durationSec,
+    bpm: track.bpm,
+  }
+}
+
+export function searchLocal(term: string): CatalogItem[] {
+  const query = term.trim().toLowerCase()
+  const matched = query
+    ? tracks.filter((track) =>
+        [track.title, track.titleEn, track.blurb, String(track.bpm)].join(" ").toLowerCase().includes(query)
+      )
+    : tracks
+  return matched.map(localCatalogItem)
+}
+
+export function localPlayable(id: string): Playable | null {
+  const track = tracks.find((item) => item.id === id)
+  if (!track) return null
+  const hints = [track.title, track.titleEn, track.blurb, `${track.bpm} BPM`]
+  const step = track.durationSec / hints.length
+  const lyrics = hints.map((line, index) => `[${formatStamp(index * step)}]${line}`).join("\n")
+  return {
+    ...localCatalogItem(track),
+    audioUrl: null,
+    lyricsText: lyrics,
+    previewOnly: false,
+    note: null,
+  }
+}
+
+function formatStamp(seconds: number) {
+  const whole = Math.floor(seconds)
+  const minutes = Math.floor(whole / 60)
+  const remain = whole % 60
+  return `${String(minutes).padStart(2, "0")}:${String(remain).padStart(2, "0")}.00`
+}
+
+const remembered = new Map<string, Playable>()
+
+export function rememberPlayable(item: Playable) {
+  remembered.set(item.id, item)
+}
+
+export function recallPlayable(id: string) {
+  return remembered.get(id) ?? localPlayable(id)
+}
