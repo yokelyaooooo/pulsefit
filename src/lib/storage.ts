@@ -61,14 +61,8 @@ export function saveState(state: PersistedState) {
 
 const serverSnapshot: PersistedState = emptyState()
 let snapshot: PersistedState = serverSnapshot
-let loaded = false
+let hydrated = false
 const listeners = new Set<() => void>()
-
-function ensureLoaded() {
-  if (loaded || typeof window === "undefined") return
-  snapshot = loadState()
-  loaded = true
-}
 
 export function subscribePersisted(listener: () => void) {
   listeners.add(listener)
@@ -76,7 +70,6 @@ export function subscribePersisted(listener: () => void) {
 }
 
 export function getPersistedSnapshot() {
-  ensureLoaded()
   return snapshot
 }
 
@@ -84,8 +77,18 @@ export function getServerPersistedSnapshot() {
   return serverSnapshot
 }
 
+export function hydratePersisted() {
+  if (hydrated || typeof window === "undefined") return
+  snapshot = loadState()
+  hydrated = true
+  listeners.forEach((listener) => listener())
+}
+
 export function updatePersisted(patch: Partial<PersistedState>) {
-  ensureLoaded()
+  if (!hydrated && typeof window !== "undefined") {
+    snapshot = loadState()
+    hydrated = true
+  }
   snapshot = { ...snapshot, ...patch }
   saveState(snapshot)
   listeners.forEach((listener) => listener())

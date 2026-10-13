@@ -31,7 +31,6 @@ interface PlayOptions {
 }
 
 interface PlayerContextValue {
-  ready: boolean
   status: Status
   trackId: string | null
   queue: string[]
@@ -66,14 +65,6 @@ interface PlayerContextValue {
 
 const PlayerContext = createContext<PlayerContextValue | null>(null)
 
-function clientMounted() {
-  return true
-}
-
-function serverMounted() {
-  return false
-}
-
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const engineRef = useRef<PulseEngine | null>(null)
   const listeners = useRef(new Set<(snapshot: EngineSnapshot) => void>())
@@ -102,7 +93,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const favorites = persisted.favorites
   const sessions = persisted.sessions
   const volume = persisted.volume
-  const ready = useSyncExternalStore(subscribePersisted, clientMounted, serverMounted)
   const [workout, setWorkout] = useState<WorkoutClock | null>(null)
   const [summary, setSummary] = useState<SessionRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -250,6 +240,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!workout) finishingRef.current = false
   }, [workout])
+
+  useEffect(() => {
+    engineRef.current?.setVolume(volume)
+  }, [volume])
 
   useEffect(() => {
     let frame = 0
@@ -490,7 +484,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<PlayerContextValue>(
     () => ({
-      ready,
       status,
       trackId,
       queue,
@@ -523,7 +516,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       subscribeVisual,
     }),
     [
-      ready,
       status,
       trackId,
       queue,

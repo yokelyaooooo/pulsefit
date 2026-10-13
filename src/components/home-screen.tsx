@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useSyncExternalStore } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Activity, Dumbbell, Flame, Flower2, Moon, Play } from "lucide-react"
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { getPlan, plans, suggestedPlanId, tagLabel, tracks } from "@/lib/catalog"
+import { hydratePersisted } from "@/lib/storage"
 import type { WorkoutTag } from "@/lib/types"
 import { formatClock } from "@/lib/audio/clock"
 import { planDuration } from "@/lib/workout"
@@ -21,8 +22,30 @@ const icons: Record<WorkoutTag, typeof Flame> = {
   recover: Moon,
 }
 
-function subscribeClock() {
-  return () => {}
+const serverClock = {
+  planId: "hiit",
+  line: "把节拍锁在你的动作上。",
+}
+let clockSnapshot = serverClock
+const clockListeners = new Set<() => void>()
+
+function subscribeClock(listener: () => void) {
+  clockListeners.add(listener)
+  return () => clockListeners.delete(listener)
+}
+
+function getClockSnapshot() {
+  return clockSnapshot
+}
+
+function getServerClockSnapshot() {
+  return serverClock
+}
+
+function publishClock() {
+  const hour = new Date().getHours()
+  clockSnapshot = { planId: suggestedPlanId(hour), line: greeting(hour) }
+  clockListeners.forEach((listener) => listener())
 }
 
 function greeting(hour: number) {
@@ -36,16 +59,16 @@ function greeting(hour: number) {
 export function HomeScreen() {
   const router = useRouter()
   const player = usePlayer()
-  const suggested = useSyncExternalStore(
-    subscribeClock,
-    () => suggestedPlanId(new Date().getHours()),
-    () => "hiit"
-  )
-  const line = useSyncExternalStore(
-    subscribeClock,
-    () => greeting(new Date().getHours()),
-    () => "把节拍锁在你的动作上。"
-  )
+  const clock = useSyncExternalStore(subscribeClock, getClockSnapshot, getServerClockSnapshot)
+  const suggested = clock.planId
+  const line = clock.line
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      publishClock()
+      hydratePersisted()
+    })
+  }, [])
   const [chosen, setChosen] = useState<string | null>(null)
   const plan = getPlan(chosen ?? suggested) ?? plans[0]
   const Icon = icons[plan.tag]
@@ -63,10 +86,7 @@ export function HomeScreen() {
         <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{line}</p>
       </header>
 
-      {!player.ready ? (
-        <div className="h-48 animate-pulse rounded-3xl bg-card" />
-      ) : (
-        <Card className="overflow-hidden bg-[linear-gradient(160deg,rgba(255,77,26,0.18),rgba(255,197,109,0.05)_42%,transparent)]">
+      <Card className="overflow-hidden bg-[linear-gradient(160deg,rgba(255,77,26,0.18),rgba(255,197,109,0.05)_42%,transparent)]">
           <CardContent className="space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -86,7 +106,6 @@ export function HomeScreen() {
             </Button>
           </CardContent>
         </Card>
-      )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">换一种练法</h2>

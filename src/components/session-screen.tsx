@@ -1,6 +1,7 @@
 "use client"
 
 import { Activity, Dumbbell, Flame, Flower2, Moon, Square } from "lucide-react"
+import { usePersistedStore } from "@/components/use-persisted-store"
 import { BeatRing } from "@/components/beat-ring"
 import { usePlayer } from "@/components/player-provider"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +23,7 @@ const icons: Record<WorkoutTag, typeof Flame> = {
 
 export function SessionScreen() {
   const player = usePlayer()
+  usePersistedStore()
   const plan = player.workout ? getPlan(player.workout.planId) : null
 
   if (!player.workout || !plan) {

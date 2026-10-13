@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { usePersistedStore } from "@/components/use-persisted-store"
 import { usePlayer } from "@/components/player-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +17,7 @@ import { formatClock } from "@/lib/audio/clock"
 
 export function MeScreen() {
   const player = usePlayer()
+  usePersistedStore()
   const [confirm, setConfirm] = useState(false)
   const minutes = Math.round(player.sessions.reduce((sum, session) => sum + session.durationSec, 0) / 60)
   const finished = player.sessions.filter((session) => session.finished).length
@@ -29,10 +31,7 @@ export function MeScreen() {
         </p>
       </header>
 
-      {!player.ready ? (
-        <div className="h-28 animate-pulse rounded-2xl bg-card" />
-      ) : (
-        <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2">
           {[
             ["完成", String(finished)],
             ["分钟", String(minutes)],
@@ -44,7 +43,6 @@ export function MeScreen() {
             </div>
           ))}
         </div>
-      )}
 
       <label className="block space-y-3 rounded-2xl bg-card px-4 py-4 ring-1 ring-white/8">
         <span className="flex justify-between text-sm">

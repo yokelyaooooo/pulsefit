@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { usePersistedStore } from "@/components/use-persisted-store"
 import { Heart, Pause, Play } from "lucide-react"
 import { usePlayer } from "@/components/player-provider"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,7 @@ const filters = ["all", "saved", "hiit", "strength", "cardio", "yoga", "recover"
 
 export function LibraryScreen() {
   const player = usePlayer()
+  usePersistedStore()
   const [filter, setFilter] = useState<(typeof filters)[number]>("all")
   const [query, setQuery] = useState("")
 
