@@ -26,8 +26,8 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
   return (
     <section className="flex h-full min-h-[70vh] flex-col px-5 py-6 sm:px-8">
       <div className="flex items-center justify-between">
-        <p className="text-xs tracking-[0.22em] text-[var(--theme-a)] uppercase">
-          {now ? sourceLabel[now.source] : "PulseFit"}
+        <p className="t-caption text-[color:var(--label-secondary)]">
+          {now ? sourceLabel[now.source] : "燃律"}
         </p>
         {onClose ? (
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -43,10 +43,10 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
           seed={now?.id ?? "pulsefit"}
           title={now?.title ?? "燃律"}
           artwork={now?.artwork}
-          className="aspect-square w-full max-w-sm rounded-[2rem] shadow-2xl"
+          className="aspect-square w-full max-w-sm rounded-[28px] shadow-[0_18px_40px_rgba(28,28,30,0.16)]"
         />
         <div className="mt-6 w-full max-w-sm text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">{now ? now.title : "还没有在播"}</h2>
+          <h2 className="t-1">{now ? now.title : "还没有在播"}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {now
               ? `${now.artist} · ${now.bpm} BPM`
@@ -85,7 +85,7 @@ export function NowPlaying({ onClose }: { onClose?: () => void }) {
           </Button>
           <Button
             size="icon-lg"
-            className="size-16 rounded-full"
+            className="size-16 rounded-full shadow-[0_10px_24px_rgba(28,28,30,0.16)]"
             aria-label={player.status === "playing" ? "暂停" : "播放"}
             onClick={() => void player.toggle()}
           >

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
+import { Paint } from "@/components/artwork"
 import { ExerciseIcon } from "@/components/exercise-icon"
 import { MuscleMap } from "@/components/muscle-map"
 import { Button } from "@/components/ui/button"
@@ -12,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { builtinExercises } from "@/lib/trainlog/exercises"
+import { builtinExercises, getBuiltinExercise } from "@/lib/trainlog/exercises"
 import { activeMuscles, estimateKcal, formatLoad, logCardioSeconds, logVolumeKg, shareCardSvg } from "@/lib/trainlog/stats"
 import { allPlans, findExercise, getServerTrainSnapshot, getTrainSnapshot, hydrateTrain, subscribeTrain, updateTrain } from "@/lib/trainlog/store"
 import { muscleLabel, type LoadMode, type MuscleId, type SetEntry, type SetKind, type WorkoutLog } from "@/lib/trainlog/types"
@@ -128,34 +129,53 @@ export function TrainScreen() {
 
   const exercises = [...builtinExercises, ...train.customExercises]
 
+  const headline = open?.title ?? done[0]?.title ?? "今天"
+
   return (
-    <div className="space-y-6">
-      <header className="flex items-end justify-between gap-3">
-        <div>
-          <p className="text-xs tracking-[0.18em] text-[var(--theme-a)] uppercase">训记</p>
-          <h1 className="text-4xl font-semibold tracking-tight">{day || "今天"}</h1>
-        </div>
-        <div className="flex gap-3 text-xs text-muted-foreground">
-          <Link href="/train/library">动作库</Link>
-          <Link href="/train/history">历史</Link>
+    <div className="space-y-5">
+      <header>
+        <p className="t-sub">{formatDay(day)}</p>
+        <div className="mt-0.5 flex items-end justify-between gap-3">
+          <h1 className="t-large">{headline}</h1>
+          <div className="flex gap-4 pb-1.5">
+            <Link href="/train/library" className="ios-link t-sub">
+              动作库
+            </Link>
+            <Link href="/train/history" className="ios-link t-sub">
+              历史
+            </Link>
+          </div>
         </div>
       </header>
 
       {!day ? <p className="text-sm text-muted-foreground">正在打开今天的训练。</p> : null}
 
+      {done.map((log) => (
+        <Summary key={log.id} log={log} />
+      ))}
+
       {day && !open ? (
         <section className="space-y-3">
-          <p className="text-sm text-muted-foreground">还没有进行中的记录。选一个计划，或先建一个空的。</p>
-          <div className="grid grid-cols-2 gap-2">
+          <h2 className="t-2">{done.length ? "再开一轮" : "开始训练"}</h2>
+          {done.length ? null : <p className="t-sub">选一个计划，或先建一个空的。</p>}
+          <div className="grid grid-cols-2 gap-2.5">
             {allPlans(train).map((plan) => (
               <button
                 key={plan.id}
                 type="button"
-                className="rounded-2xl bg-white/6 px-3 py-3 text-left"
+                className="overflow-hidden rounded-[18px] text-left shadow-[0_10px_24px_rgba(28,28,30,0.08)]"
                 onClick={() => startFromPlan(plan.id)}
               >
-                <span className="block font-medium">{plan.name}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">{plan.blurb}</span>
+                <Paint tone={plan.focus} className="flex h-[132px] flex-col justify-end p-3">
+                  <span className="absolute top-3 left-3 flex">
+                    {plan.exerciseIds.slice(0, 3).map((id) => {
+                      const exercise = getBuiltinExercise(id)
+                      return exercise ? <ExerciseIcon key={id} glyph={exercise.glyph} className="size-8 rounded-[8px] bg-white/85" /> : null
+                    })}
+                  </span>
+                  <span className="t-headline relative">{plan.name}</span>
+                  <span className="t-caption relative line-clamp-1 text-white/80">{plan.blurb}</span>
+                </Paint>
               </button>
             ))}
           </div>
@@ -202,10 +222,6 @@ export function TrainScreen() {
         </div>
       ) : null}
 
-      {done.map((log) => (
-        <Summary key={log.id} log={log} />
-      ))}
-
       <Dialog open={picker} onOpenChange={setPicker}>
         <DialogContent>
           <DialogHeader>
@@ -217,7 +233,7 @@ export function TrainScreen() {
               .filter((exercise) => exercise.name.includes(filter.trim()))
               .map((exercise) => (
                 <li key={exercise.id}>
-                  <button type="button" className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-white/6" onClick={() => addExercise(exercise.id)}>
+                  <button type="button" className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-black/4" onClick={() => addExercise(exercise.id)}>
                     <ExerciseIcon glyph={exercise.glyph} className="size-9" />
                     <span>
                       <span className="block text-sm font-medium">{exercise.name}</span>
@@ -254,20 +270,19 @@ function LogEditor({
   onRemoveSet: (entryId: string, setId: string) => void
 }) {
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">{log.title}</h2>
-      {log.exercises.length === 0 ? <p className="text-sm text-muted-foreground">还没有动作。</p> : null}
+    <div className="ios-card space-y-1 p-4">
+      {log.exercises.length === 0 ? <p className="t-sub">还没有动作。</p> : null}
       {log.exercises.map((exercise) => {
         const def = findExercise(getTrainSnapshot(), exercise.exerciseId)
         return (
-          <section key={exercise.id} className="rounded-3xl bg-white/5 p-3">
+          <section key={exercise.id} className="border-b border-black/6 py-3 last:border-0">
             <div className="flex items-center gap-3">
               <ExerciseIcon glyph={def?.glyph ?? "M6 16h20M16 6v20"} className="size-10" />
-              <h3 className="font-medium">{exercise.name}</h3>
+              <h3 className="t-headline">{exercise.name}</h3>
             </div>
             <ul className="mt-3 space-y-2">
               {exercise.sets.map((set, index) => (
-                <li key={set.id} className="rounded-2xl bg-black/20 p-2">
+                <li key={set.id} className="rounded-[12px] bg-[var(--fill)] p-2">
                   <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
                     <span>
                       {set.kind === "warmup" ? "热身" : set.kind === "cardio" ? "组间有氧" : `第 ${index + 1} 组`} · {formatLoad(set)}
@@ -313,19 +328,39 @@ function Summary({ log }: { log: WorkoutLog }) {
   const kcal = estimateKcal(volume, cardio, log.durationSec)
   const muscles = activeMuscles(log, (id) => findExercise(getTrainSnapshot(), id))
   return (
-    <section className="glass space-y-3 rounded-3xl p-4">
-      <h2 className="text-2xl font-semibold">{log.title}</h2>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <Stat label="容量" value={`${Math.round(volume)} kg`} />
-        <Stat label="热量" value={`${kcal}`} />
-        <Stat label="时长" value={`${Math.max(1, Math.round(log.durationSec / 60))} 分`} />
+    <section className="ios-card p-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_92px] items-center gap-2">
+        <MuscleMap active={muscles} />
+        <div className="space-y-4 text-right">
+          <Stat label="消耗 (大卡)" value={String(kcal)} />
+          <Stat label="总重量 (kg)" value={String(Math.round(volume))} />
+          <Stat label="总耗时" value={formatDuration(log.durationSec)} />
+        </div>
       </div>
-      <MuscleMap active={muscles} />
-      <p className="text-xs leading-5 text-muted-foreground">
+      <div className="mt-2 space-y-4 border-t border-black/6 pt-4">
+        {log.exercises.map((exercise) => (
+          <div key={exercise.id}>
+            <div className="flex items-center gap-2.5">
+              <ExerciseIcon glyph={findExercise(getTrainSnapshot(), exercise.exerciseId)?.glyph ?? "M6 16h20M16 6v20"} className="size-9" />
+              <h3 className="t-headline">{exercise.name}</h3>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+              {exercise.sets.map((set, index) => (
+                <span key={set.id} className="inline-flex items-baseline gap-1.5 t-sub text-[#3a3a3c]">
+                  <span className="text-[#8e8e93] tabular-nums">{index + 1}</span>
+                  <span>{formatLoad(set)}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="t-caption mt-4 leading-5 text-[color:var(--label-secondary)]">
         练到 {muscles.map((id: MuscleId) => muscleLabel[id]).join("、") || "还没有部位"}。热量是估算：容量×0.004 + 组间有氧秒×0.12 + 分钟×3.2，不是医学测量。热身不计入容量。
       </p>
       <Button
         variant="secondary"
+        className="mt-3"
         onClick={() => {
           const svg = shareCardSvg({
             title: log.title,
@@ -353,10 +388,25 @@ function Summary({ log }: { log: WorkoutLog }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-lg font-semibold tabular-nums">{value}</div>
-      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-[28px] leading-8 font-semibold tracking-[-0.4px] tabular-nums">{value}</div>
+      <div className="t-caption text-[color:var(--label-secondary)]">{label}</div>
     </div>
   )
+}
+
+function formatDay(day: string) {
+  if (!day) return "今天"
+  const date = new Date(`${day}T12:00:00`)
+  const week = "日一二三四五六"[date.getDay()] ?? ""
+  return `${day} 周${week}`
+}
+
+function formatDuration(seconds: number) {
+  const minutes = Math.max(1, Math.round(seconds / 60))
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest ? `${hours}h ${rest}m` : `${hours}h`
 }
 
 function download(svg: string, date: string) {

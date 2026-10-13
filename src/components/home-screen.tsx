@@ -3,15 +3,18 @@
 import { useEffect, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Play } from "lucide-react"
+import { Play, Search } from "lucide-react"
 import { CoverArt } from "@/components/cover-art"
+import { FocusTile } from "@/components/focus-tile"
 import { usePlayer } from "@/components/player-provider"
 import { Button } from "@/components/ui/button"
-import { getPlan, plans, suggestedPlanId, tracks } from "@/lib/catalog"
+import { Paint } from "@/components/artwork"
+import { getPlan, getTrack, plans, suggestedPlanId, tracks } from "@/lib/catalog"
 import { hydratePersisted } from "@/lib/storage"
 import { focuses } from "@/lib/training/focus"
 import { formatClock } from "@/lib/audio/clock"
 import { planDuration } from "@/lib/workout"
+import { cn } from "@/lib/utils"
 
 const serverClock = {
   planId: "hiit",
@@ -66,107 +69,108 @@ export function HomeScreen() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-4xl font-semibold tracking-tight">燃律</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">{clock.line}</p>
+        <h1 className="t-large">燃律</h1>
+        <p className="t-sub mt-1">{clock.line}</p>
       </header>
 
-      <Link
-        href="/search"
-        className="glass block rounded-2xl px-4 py-3 text-sm text-muted-foreground"
-      >
+      <Link href="/search" className="flex h-11 items-center gap-2 rounded-[12px] bg-[var(--fill)] px-3 text-[17px] text-[color:var(--label-secondary)]">
+        <Search className="size-4" />
         搜索训练日、动作或歌曲
       </Link>
 
       <section>
-        <div className="mb-3 flex items-end justify-between">
-          <h2 className="text-xl font-semibold">训练日</h2>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <h2 className="t-2 mb-3">训练日</h2>
+        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
           {days.map((focus) => (
-            <Link
-              key={focus.id}
-              href={`/focus/${focus.id}`}
-              className="w-40 shrink-0 rounded-3xl p-4 text-left shadow-lg"
-              style={{ background: `linear-gradient(160deg, ${focus.accent}, ${focus.ink})`, color: "white" }}
-            >
-              <div className="text-lg font-semibold">{focus.name}</div>
-              <div className="mt-6 text-xs opacity-80">{focus.targetBpm} BPM</div>
-            </Link>
+            <FocusTile key={focus.id} focus={focus} className="h-[148px] w-[168px] shrink-0" />
           ))}
         </div>
       </section>
 
       <section>
-        <h2 className="mb-3 text-xl font-semibold">动作</h2>
-        <div className="grid grid-cols-3 gap-2">
+        <h2 className="t-2 mb-3">动作</h2>
+        <div className="grid grid-cols-3 gap-2.5">
           {lifts.map((focus) => (
-            <Link
-              key={focus.id}
-              href={`/focus/${focus.id}`}
-              className="rounded-2xl px-3 py-4 text-sm font-medium"
-              style={{ background: `linear-gradient(180deg, ${focus.accent}, ${focus.ink})`, color: "white" }}
-            >
-              {focus.name}
-            </Link>
+            <FocusTile key={focus.id} focus={focus} className="h-[96px] p-3" />
           ))}
         </div>
       </section>
 
       <section>
         <div className="mb-3 flex items-end justify-between">
-          <h2 className="text-xl font-semibold">本地专辑</h2>
-          <Link href="/library" className="text-xs text-muted-foreground">
+          <h2 className="t-2">本地专辑</h2>
+          <Link href="/library" className="ios-link t-sub">
             全部
           </Link>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
           {tracks.map((track) => (
             <button
               key={track.id}
               type="button"
-              className="w-36 shrink-0 text-left"
+              className="w-[132px] shrink-0 text-left"
               onClick={() => void player.playTrack(track.id, { queue: tracks.map((item) => item.id) })}
             >
-              <CoverArt seed={track.id} title={track.title} className="aspect-square w-full rounded-2xl" />
-              <div className="mt-2 truncate text-sm font-medium">{track.title}</div>
-              <div className="truncate text-xs text-muted-foreground">{track.bpm} BPM</div>
+              <CoverArt seed={track.id} title={track.title} className="aspect-square w-full rounded-[16px] shadow-[0_8px_18px_rgba(28,28,30,0.12)]" />
+              <div className="t-headline mt-2 truncate text-[15px]">{track.title}</div>
+              <div className="t-caption truncate text-[color:var(--label-secondary)]">{track.bpm} BPM</div>
             </button>
           ))}
         </div>
       </section>
 
-      <section className="glass rounded-3xl p-4">
-        <p className="text-xs tracking-[0.18em] text-[var(--theme-a)] uppercase">间歇</p>
-        <h2 className="mt-2 text-2xl font-semibold">{plan.name}</h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">{plan.blurb}</p>
-        <p className="mt-3 text-xs text-muted-foreground tabular-nums">
-          {plan.bpm} BPM · {formatClock(planDuration(plan))}
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {plans.map((item) => (
-            <Button
-              key={item.id}
-              size="sm"
-              variant={item.id === plan.id ? "default" : "secondary"}
-              onClick={() => {
-                clockSnapshot = { ...clockSnapshot, planId: item.id }
-                clockListeners.forEach((listener) => listener())
-              }}
-            >
-              {item.name}
-            </Button>
-          ))}
+      <section>
+        <h2 className="t-2 mb-3">间歇</h2>
+        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
+          {plans.map((item) => {
+            const art = getTrack(item.trackId)
+            const selected = item.id === plan.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={cn(
+                  "w-[168px] shrink-0 overflow-hidden rounded-[18px] text-left shadow-[0_12px_24px_rgba(28,28,30,0.12)]",
+                  selected ? "ring-2 ring-[#1c1c1e]" : ""
+                )}
+                onClick={() => {
+                  clockSnapshot = { ...clockSnapshot, planId: item.id }
+                  clockListeners.forEach((listener) => listener())
+                }}
+              >
+                <Paint tone={item.tag} className="relative h-[148px] p-3.5">
+                  {art ? (
+                    <CoverArt seed={art.id} title={art.title} className="absolute inset-0 size-full opacity-35" />
+                  ) : null}
+                  <span className="t-caption relative text-white/85">{formatClock(planDuration(item))}</span>
+                  <span className="t-headline relative mt-6 block">{item.name}</span>
+                  <span className="t-caption relative text-white/80">{item.bpm} BPM</span>
+                </Paint>
+              </button>
+            )
+          })}
         </div>
-        <Button
-          className="mt-4 w-full"
-          onClick={() => {
-            void player.startWorkout(plan.id)
-            router.push("/session")
-          }}
-        >
-          <Play />
-          开始这轮
-        </Button>
+        <div className="ios-card mt-3 flex items-center gap-3 p-3">
+          <CoverArt
+            seed={getTrack(plan.trackId)?.id ?? plan.id}
+            title={plan.name}
+            className="size-16 shrink-0 rounded-[14px]"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="t-headline truncate">{plan.name}</div>
+            <div className="t-caption mt-0.5 text-[color:var(--label-secondary)]">{plan.blurb}</div>
+          </div>
+          <Button
+            className="shrink-0"
+            onClick={() => {
+              void player.startWorkout(plan.id)
+              router.push("/session")
+            }}
+          >
+            <Play className="fill-current" />
+            开始
+          </Button>
+        </div>
       </section>
     </div>
   )

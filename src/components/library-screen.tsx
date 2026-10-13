@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { Paint } from "@/components/artwork"
 import { CoverArt } from "@/components/cover-art"
 import { usePersistedStore } from "@/components/use-persisted-store"
 import { Heart, Pause, Play } from "lucide-react"
@@ -37,24 +38,34 @@ export function LibraryScreen() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">曲库</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          十二首训练循环，按项目分好。点进去就会按原速响起来。
-        </p>
+        <h1 className="t-large">曲库</h1>
       </header>
+      <div className="grid grid-cols-4 gap-2">
+        {tracks.slice(0, 4).map((track) => (
+          <button
+            key={track.id}
+            type="button"
+            className="text-left"
+            onClick={() => void player.playTrack(track.id, { queue: tracks.map((item) => item.id) })}
+          >
+            <CoverArt seed={track.id} title={track.title} className="aspect-square w-full rounded-[14px] shadow-[0_8px_16px_rgba(28,28,30,0.12)]" />
+            <span className="t-caption mt-1 block truncate">{track.title}</span>
+          </button>
+        ))}
+      </div>
 
       <Input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="搜曲名或感觉"
         aria-label="搜索曲目"
-        className="h-10"
+        className="h-11"
       />
 
       <Tabs value={filter} onValueChange={(value) => setFilter(value as (typeof filters)[number])}>
-        <TabsList className="h-auto w-full justify-start overflow-x-auto">
+        <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-full bg-[var(--fill)] p-1">
           {filters.map((item) => (
-            <TabsTrigger key={item} value={item}>
+            <TabsTrigger key={item} value={item} className="rounded-full px-3 py-1 text-[13px]">
               {item === "all" ? "全部" : item === "saved" ? "收藏" : tagLabel[item as WorkoutTag]}
             </TabsTrigger>
           ))}
@@ -62,9 +73,9 @@ export function LibraryScreen() {
       </Tabs>
 
       {visible.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/15 px-4 py-10 text-center">
-          <p className="font-medium">没有匹配的曲子</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <Paint tone="pull" className="rounded-[22px] px-4 py-8 text-center">
+          <p className="t-headline relative">没有匹配的曲子</p>
+          <p className="t-caption relative mt-1 text-white/80">
             {filter === "saved" ? "点曲目右边的心，会收进这里。" : "换个词，或者把筛选清掉。"}
           </p>
           {query || filter !== "all" ? (
@@ -79,15 +90,15 @@ export function LibraryScreen() {
               清空筛选
             </Button>
           ) : null}
-        </div>
+        </Paint>
       ) : (
         <ul className="space-y-2">
           {visible.map((track) => {
             const playing = player.trackId === track.id && player.status === "playing"
             const saved = player.favorites.includes(track.id)
             return (
-              <li key={track.id} className="flex items-center gap-2 rounded-2xl bg-card px-3 py-3 ring-1 ring-white/8">
-                <CoverArt seed={track.id} title={track.title} className="size-12 rounded-xl" />
+              <li key={track.id} className="ios-row flex items-center gap-2 px-2.5 py-2.5">
+                <CoverArt seed={track.id} title={track.title} className="size-12 rounded-[12px]" />
                 <button
                   type="button"
                   className="min-w-0 flex-1 text-left"
@@ -113,7 +124,7 @@ export function LibraryScreen() {
                   aria-pressed={saved}
                   onClick={() => player.toggleFavorite(track.id)}
                 >
-                  <Heart className={saved ? "fill-ember text-ember" : ""} />
+                  <Heart className={saved ? "fill-[#ff2d55] text-[#ff2d55]" : ""} />
                 </Button>
                 <Button
                   size="icon"

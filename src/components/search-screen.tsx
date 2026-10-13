@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { Play } from "lucide-react"
+import { Play, Search } from "lucide-react"
+import { Paint } from "@/components/artwork"
 import { CoverArt } from "@/components/cover-art"
+import { FocusTile } from "@/components/focus-tile"
 import { usePlayer } from "@/components/player-provider"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { searchLocal } from "@/lib/music/local"
 import { rememberCatalog } from "@/lib/music/local"
 import { getMusicSnapshot } from "@/lib/music/config"
@@ -55,9 +55,9 @@ export function SearchScreen() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <header>
-        <h1 className="text-4xl font-semibold tracking-tight">搜索</h1>
+        <h1 className="t-large">搜索</h1>
       </header>
       <form
         className="space-y-3"
@@ -66,13 +66,16 @@ export function SearchScreen() {
           void runSearch()
         }}
       >
-        <Input
-          value={term}
-          onChange={(event) => setTerm(event.target.value)}
-          placeholder="歌曲、训练日、动作"
-          aria-label="搜索"
-          className="h-11 rounded-2xl"
-        />
+        <label className="flex h-11 items-center gap-2 rounded-[12px] bg-[var(--fill)] px-3">
+          <Search className="size-4 shrink-0 text-[color:var(--label-secondary)]" />
+          <input
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="歌曲、训练日、动作"
+            aria-label="搜索"
+            className="t-body min-w-0 flex-1 bg-transparent text-[17px] outline-none placeholder:text-[color:var(--label-tertiary)]"
+          />
+        </label>
         <div className="flex flex-wrap gap-2">
           {sources.map((source) => {
             const on = picked.includes(source.id)
@@ -102,21 +105,13 @@ export function SearchScreen() {
       {!searched ? (
         <div className="grid grid-cols-2 gap-3">
           {focuses.map((focus) => (
-            <Link
-              key={focus.id}
-              href={`/focus/${focus.id}`}
-              className="rounded-3xl p-4"
-              style={{ background: `linear-gradient(160deg, ${focus.accent}, ${focus.ink})`, color: "white" }}
-            >
-              <div className="text-xs opacity-80">{focus.kind === "day" ? "训练日" : "动作"}</div>
-              <div className="mt-6 text-2xl font-semibold">{focus.name}</div>
-            </Link>
+            <FocusTile key={focus.id} focus={focus} />
           ))}
         </div>
       ) : null}
 
       {notes.length > 0 ? (
-        <ul className="space-y-2 text-sm text-ember">
+        <ul className="space-y-2 text-sm text-[#ff3b30]">
           {notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
@@ -124,18 +119,19 @@ export function SearchScreen() {
       ) : null}
 
       {searched && !pending && results.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-muted-foreground">
-          没有结果。外部音源要先在「音源」里配好自己的接口。
-        </p>
+        <Paint tone="search" className="rounded-[22px] px-4 py-8">
+          <p className="t-headline relative">没有结果</p>
+          <p className="t-caption relative mt-1 text-white/85">外部音源要先在「音源」里配好自己的接口。</p>
+        </Paint>
       ) : null}
 
       <ul className="space-y-2">
         {results.map((item) => (
-          <li key={item.id} className="flex items-center gap-3 rounded-2xl bg-white/5 px-2 py-2">
-            <CoverArt seed={item.id} title={item.title} artwork={item.artwork} className="size-14 rounded-xl" />
+          <li key={item.id} className="ios-row flex items-center gap-3 px-2 py-2">
+            <CoverArt seed={item.id} title={item.title} artwork={item.artwork} className="size-14 rounded-[12px]" />
             <div className="min-w-0 flex-1">
-              <div className="truncate font-medium">{item.title}</div>
-              <div className="truncate text-xs text-muted-foreground">
+              <div className="t-headline truncate">{item.title}</div>
+              <div className="t-caption truncate text-[color:var(--label-secondary)]">
                 {item.artist} · {item.source === "local" ? `${item.bpm} BPM` : item.source} · {formatClock(item.durationSec)}
               </div>
             </div>
@@ -145,7 +141,7 @@ export function SearchScreen() {
               aria-label={`播放${item.title}`}
               onClick={() => void player.playTrack(item.id, { queue: results.map((entry) => entry.id) })}
             >
-              <Play />
+              <Play className="fill-current" />
             </Button>
           </li>
         ))}

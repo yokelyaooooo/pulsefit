@@ -35,10 +35,10 @@ export function BeatRing({
     <div className="relative mx-auto grid place-items-center" style={{ width: size, height: size }}>
       <div
         ref={haloRef}
-        className="absolute inset-[12%] rounded-full bg-[radial-gradient(circle,rgba(255,77,26,0.45),transparent_68%)] transition-transform duration-100"
+        className="absolute inset-[12%] rounded-full bg-[radial-gradient(circle,rgba(255,45,85,0.28),transparent_68%)] transition-transform duration-100"
       />
       <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90">
-        <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(60,60,67,0.12)" strokeWidth="3" />
         <circle
           ref={ringRef}
           cx="50"
@@ -59,7 +59,7 @@ export function BeatRing({
         </defs>
       </svg>
       <div className="relative z-10 px-8 text-center">
-        <div className="font-sans text-5xl font-semibold tracking-tight text-gold tabular-nums">{label}</div>
+        <div className="text-[44px] leading-none font-semibold tracking-[-0.8px] text-[#1c1c1e] tabular-nums">{label}</div>
         {caption ? <div className="mt-1 text-sm text-muted-foreground">{caption}</div> : null}
       </div>
     </div>

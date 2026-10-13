@@ -13,6 +13,7 @@ import { neteaseAccount, neteasePlaylists, neteaseQrPoll, neteaseQrStart } from 
 import { PROVIDER_NOTES } from "@/lib/music/notes"
 import { describeQqCookie, qqConnect, qqPlaylists } from "@/lib/music/qq"
 import type { PlaylistItem } from "@/lib/music/types"
+import { SourceMark } from "@/components/artwork"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { usePlayer } from "@/components/player-provider"
@@ -55,18 +56,18 @@ export function SourcesScreen() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-4xl font-semibold tracking-tight">音源</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        <h1 className="t-large">音源</h1>
+        <p className="t-sub mt-1">
           本地节拍随时能响。网易云、QQ 音乐和 Apple Music 都要用你自己的接口或开发者 token，燃律不代登、也不保存别人的 cookie。
         </p>
       </header>
-      {message ? <p className="rounded-2xl bg-white/8 px-3 py-2 text-sm">{message}</p> : null}
+      {message ? <p className="ios-row px-3.5 py-2.5 text-sm">{message}</p> : null}
 
-      <SourceCard title={PROVIDER_NOTES.local.title} works={PROVIDER_NOTES.local.works} limit={PROVIDER_NOTES.local.limit}>
+      <SourceCard source="local" title={PROVIDER_NOTES.local.title} works={PROVIDER_NOTES.local.works} limit={PROVIDER_NOTES.local.limit}>
         <p className="text-sm text-muted-foreground">状态：可用。不需要登录。</p>
       </SourceCard>
 
-      <SourceCard title={PROVIDER_NOTES.netease.title} works={PROVIDER_NOTES.netease.works} limit={PROVIDER_NOTES.netease.limit}>
+      <SourceCard source="netease" title={PROVIDER_NOTES.netease.title} works={PROVIDER_NOTES.netease.works} limit={PROVIDER_NOTES.netease.limit}>
         <label className="block text-xs text-muted-foreground">
           API 地址
           <Input
@@ -117,7 +118,7 @@ export function SourcesScreen() {
         </div>
       </SourceCard>
 
-      <SourceCard title={PROVIDER_NOTES.qq.title} works={PROVIDER_NOTES.qq.works} limit={PROVIDER_NOTES.qq.limit}>
+      <SourceCard source="qq" title={PROVIDER_NOTES.qq.title} works={PROVIDER_NOTES.qq.works} limit={PROVIDER_NOTES.qq.limit}>
         <label className="block text-xs text-muted-foreground">
           API 地址
           <Input
@@ -172,7 +173,7 @@ export function SourcesScreen() {
         </div>
       </SourceCard>
 
-      <SourceCard title={PROVIDER_NOTES.apple.title} works={PROVIDER_NOTES.apple.works} limit={PROVIDER_NOTES.apple.limit}>
+      <SourceCard source="apple" title={PROVIDER_NOTES.apple.title} works={PROVIDER_NOTES.apple.works} limit={PROVIDER_NOTES.apple.limit}>
         <label className="block text-xs text-muted-foreground">
           Developer token
           <Input
@@ -228,13 +229,13 @@ export function SourcesScreen() {
 
       {lists.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="text-xl font-semibold">歌单</h2>
+          <h2 className="t-2">歌单</h2>
           <ul className="space-y-2">
             {lists.map((list) => (
               <li key={list.id}>
                 <button
                   type="button"
-                  className="w-full rounded-2xl bg-white/5 px-3 py-3 text-left"
+                  className="ios-row flex w-full items-center gap-3 px-2.5 py-2.5 text-left"
                   onClick={() => {
                     void tracksForPlaylist(list.source, list.nativeId, getMusicSnapshot())
                       .then((items) => {
@@ -245,9 +246,12 @@ export function SourcesScreen() {
                       .catch((caught: unknown) => setMessage(caught instanceof Error ? caught.message : "歌曲读取失败"))
                   }}
                 >
-                  <span className="font-medium">{list.name}</span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {list.source} {list.trackCount != null ? `· ${list.trackCount} 首` : ""}
+                  <SourceMark source={list.source} className="size-12 rounded-[12px]" />
+                  <span className="min-w-0">
+                    <span className="t-headline block truncate">{list.name}</span>
+                    <span className="t-caption mt-0.5 block text-[color:var(--label-secondary)]">
+                      {list.source} {list.trackCount != null ? `· ${list.trackCount} 首` : ""}
+                    </span>
                   </span>
                 </button>
               </li>
@@ -261,22 +265,29 @@ export function SourcesScreen() {
 }
 
 function SourceCard({
+  source,
   title,
   works,
   limit,
   children,
 }: {
+  source: string
   title: string
   works: string
   limit: string
   children: React.ReactNode
 }) {
   return (
-    <section className="glass space-y-3 rounded-3xl p-4">
-      <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="text-sm leading-6">{works}</p>
-      <p className="text-sm leading-6 text-muted-foreground">{limit}</p>
-      {children}
+    <section className="ios-card overflow-hidden">
+      <div className="flex items-center gap-3 px-4 pt-4">
+        <SourceMark source={source} />
+        <h2 className="t-2">{title}</h2>
+      </div>
+      <div className="space-y-3 p-4">
+        <p className="t-sub text-[#3a3a3c]">{works}</p>
+        <p className="t-caption leading-5 text-[color:var(--label-secondary)]">{limit}</p>
+        {children}
+      </div>
     </section>
   )
 }

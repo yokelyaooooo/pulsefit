@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
+import { Paint } from "@/components/artwork"
 import { ExerciseIcon } from "@/components/exercise-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { builtinExercises, monogramGlyph } from "@/lib/trainlog/exercises"
 import { allPlans, getServerTrainSnapshot, getTrainSnapshot, hydrateTrain, subscribeTrain, updateTrain } from "@/lib/trainlog/store"
 import { MUSCLES, muscleLabel, type ExerciseDef, type MuscleId, type PlanDef, type TrainFocus } from "@/lib/trainlog/types"
+import { cn } from "@/lib/utils"
 
 const focuses: TrainFocus[] = ["push", "pull", "legs", "shoulders", "cardio", "core"]
 const focusName: Record<TrainFocus, string> = {
@@ -39,19 +41,29 @@ export function TrainLibraryScreen() {
   return (
     <div className="space-y-8">
       <header>
-        <Link href="/train" className="text-xs text-muted-foreground">
+        <Link href="/train" className="ios-link t-sub">
           返回训记
         </Link>
-        <h1 className="mt-2 text-4xl font-semibold">动作与计划</h1>
-        <p className="mt-2 text-sm text-muted-foreground">内置计划可以直接开练。下面也能加你自己的动作和计划。</p>
+        <h1 className="t-large mt-2">动作与计划</h1>
+        <p className="t-sub mt-1">内置计划可以直接开练。下面也能加你自己的动作和计划。</p>
       </header>
 
       <section className="space-y-2">
-        <h2 className="text-xl font-semibold">计划</h2>
+        <h2 className="t-2">计划</h2>
         {allPlans(train).map((plan) => (
-          <article key={plan.id} className="rounded-2xl bg-white/5 px-3 py-3">
-            <div className="font-medium">{plan.name}</div>
-            <p className="mt-1 text-xs text-muted-foreground">{plan.blurb}</p>
+          <article key={plan.id} className="ios-card overflow-hidden">
+            <Paint tone={plan.focus} className="flex items-end justify-between p-3">
+              <div>
+                <div className="t-headline">{plan.name}</div>
+                <p className="t-caption mt-0.5 text-white/80">{plan.blurb}</p>
+              </div>
+              <div className="flex">
+                {plan.exerciseIds.slice(0, 3).map((id) => {
+                  const exercise = builtinExercises.find((item) => item.id === id)
+                  return exercise ? <ExerciseIcon key={id} glyph={exercise.glyph} className="size-8 bg-white/85" /> : null
+                })}
+              </div>
+            </Paint>
             {!plan.builtin ? (
               <Button
                 size="sm"
@@ -66,8 +78,8 @@ export function TrainLibraryScreen() {
         ))}
       </section>
 
-      <section className="glass space-y-3 rounded-3xl p-4">
-        <h2 className="text-xl font-semibold">自定义计划</h2>
+      <section className="ios-card space-y-3 p-4">
+        <h2 className="t-2">自定义计划</h2>
         <Input value={planName} onChange={(event) => setPlanName(event.target.value)} placeholder="计划名称" aria-label="计划名称" />
         <div className="flex flex-wrap gap-2">
           {focuses.map((focus) => (
@@ -80,17 +92,20 @@ export function TrainLibraryScreen() {
           {builtinExercises.map((exercise) => {
             const on = planExercises.includes(exercise.id)
             return (
-              <Button
+              <button
                 key={exercise.id}
                 type="button"
-                size="sm"
-                variant={on ? "default" : "secondary"}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-[13px]",
+                  on ? "bg-[#1c1c1e] text-white" : "bg-[var(--fill)]"
+                )}
                 onClick={() =>
                   setPlanExercises((current) => (on ? current.filter((id) => id !== exercise.id) : [...current, exercise.id]))
                 }
               >
+                <ExerciseIcon glyph={exercise.glyph} className="size-6" />
                 {exercise.name}
-              </Button>
+              </button>
             )
           })}
         </div>
@@ -115,11 +130,11 @@ export function TrainLibraryScreen() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">动作</h2>
+        <h2 className="t-2">动作</h2>
         <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="筛选动作" aria-label="筛选动作" />
         <ul className="space-y-2">
           {exercises.map((exercise) => (
-            <li key={exercise.id} className="flex items-center gap-3 rounded-2xl bg-white/5 px-2 py-2">
+            <li key={exercise.id} className="ios-row flex items-center gap-3 px-2 py-2">
               <ExerciseIcon glyph={exercise.glyph} className="size-10" />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{exercise.name}</div>
@@ -130,8 +145,8 @@ export function TrainLibraryScreen() {
         </ul>
       </section>
 
-      <section className="glass space-y-3 rounded-3xl p-4">
-        <h2 className="text-xl font-semibold">自定义动作</h2>
+      <section className="ios-card space-y-3 p-4">
+        <h2 className="t-2">自定义动作</h2>
         <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="动作名称" aria-label="动作名称" />
         <div className="flex flex-wrap gap-2">
           {MUSCLES.map(([id, label]) => {

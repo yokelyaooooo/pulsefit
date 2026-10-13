@@ -1,6 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { Clock3, Heart, TimerReset } from "lucide-react"
+import { BrandMark } from "@/components/brand-mark"
+import { Paint } from "@/components/artwork"
+import { getPlan } from "@/lib/catalog"
 import { usePersistedStore } from "@/components/use-persisted-store"
 import { usePlayer } from "@/components/player-provider"
 import { Button } from "@/components/ui/button"
@@ -25,26 +29,30 @@ export function MeScreen() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">我的</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          训练记录留在这台设备上。音量、收藏和历史都写在本地。
-        </p>
+        <h1 className="t-large">我的</h1>
+        <p className="t-sub mt-1">训练记录留在这台设备上。音量、收藏和历史都写在本地。</p>
       </header>
 
       <div className="grid grid-cols-3 gap-2">
-          {[
-            ["完成", String(finished)],
-            ["分钟", String(minutes)],
-            ["收藏", String(player.favorites.length)],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-2xl bg-card px-3 py-4 ring-1 ring-white/8">
-              <div className="text-2xl font-semibold tabular-nums">{value}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{label}</div>
-            </div>
-          ))}
+          {(
+            [
+              { label: "完成", value: String(finished), icon: TimerReset, tone: "hiit" },
+              { label: "分钟", value: String(minutes), icon: Clock3, tone: "cardio" },
+              { label: "收藏", value: String(player.favorites.length), icon: Heart, tone: "pull" },
+            ] as const
+          ).map((stat) => {
+            const Icon = stat.icon
+            return (
+            <Paint key={stat.label} tone={stat.tone} className="rounded-[18px] px-3 py-3.5">
+              <Icon className="relative size-5" />
+              <div className="t-1 relative mt-3 tabular-nums">{stat.value}</div>
+              <div className="t-caption relative text-white/80">{stat.label}</div>
+            </Paint>
+            )
+          })}
         </div>
 
-      <label className="block space-y-3 rounded-2xl bg-card px-4 py-4 ring-1 ring-white/8">
+      <label className="ios-card block space-y-3 px-4 py-4">
         <span className="flex justify-between text-sm">
           音量
           <span className="text-muted-foreground tabular-nums">{Math.round(player.volume * 100)}</span>
@@ -61,7 +69,7 @@ export function MeScreen() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">训练记录</h2>
+          <h2 className="t-2">训练记录</h2>
           {player.sessions.length > 0 ? (
             <Button variant="ghost" size="sm" onClick={() => setConfirm(true)}>
               清空
@@ -69,36 +77,42 @@ export function MeScreen() {
           ) : null}
         </div>
         {player.sessions.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/15 px-4 py-10 text-center">
-            <p className="font-medium">还没有训练记录</p>
-            <p className="mt-1 text-sm text-muted-foreground">从首页开始一轮间歇，结束后会记在这里。</p>
-          </div>
+          <Paint tone="recover" className="rounded-[22px] px-4 py-8">
+            <p className="t-headline relative">还没有训练记录</p>
+            <p className="t-caption relative mt-1 text-white/80">从首页开始一轮间歇，结束后会记在这里。</p>
+          </Paint>
         ) : (
           <ul className="space-y-2">
             {player.sessions.map((session) => (
-              <li key={session.id} className="rounded-2xl bg-card px-4 py-3 ring-1 ring-white/8">
+              <li key={session.id} className="ios-row flex items-center gap-3 px-2.5 py-2.5">
+                <Paint tone={getPlan(session.planId)?.tag ?? "strength"} className="size-12 shrink-0 rounded-[12px]" />
+                <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium">{session.planName}</span>
-                  <span className="text-sm text-gold tabular-nums">{formatClock(session.durationSec)}</span>
+                  <span className="t-headline truncate">{session.planName}</span>
+                  <span className="t-sub shrink-0 tabular-nums">{formatClock(session.durationSec)}</span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {session.finished ? "完成" : "提前结束"} · {session.bpm} BPM ·{" "}
                   {new Date(session.completedAt).toLocaleString("zh-CN", { hour12: false })}
                 </p>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <section className="rounded-2xl bg-card px-4 py-4 text-sm leading-6 text-muted-foreground ring-1 ring-white/8">
+      <section className="ios-card flex items-center gap-3 px-4 py-4 text-sm leading-6 text-[color:var(--label-secondary)]">
+        <BrandMark className="size-14" />
+        <div>
         <p className="font-medium text-foreground">燃律 PulseFit</p>
         <p className="mt-1">应用 ID：com.pulsefit.app</p>
         <p>同一套播放器给 iOS、Android 和鸿蒙。网页版现在就能用，原生壳用这个 ID 打包。</p>
+        </div>
       </section>
 
       {player.audioLocked ? (
-        <p className="text-sm text-ember" role="status">
+        <p className="text-sm text-[#ff3b30]" role="status">
           声音还没解锁。回到播放页再点一次播放。
         </p>
       ) : null}

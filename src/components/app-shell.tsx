@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { Dumbbell, House, Library, Search } from "lucide-react"
+import { AudioLines, Dumbbell, House, Library, Search, Timer, UserRound } from "lucide-react"
+import { BrandMark } from "@/components/brand-mark"
 import { MiniPlayer } from "@/components/mini-player"
 import { NowPlaying } from "@/components/now-playing"
 import { usePlayer } from "@/components/player-provider"
@@ -17,22 +18,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
 import { formatClock } from "@/lib/audio/clock"
 
 const nav = [
-  { href: "/", label: "首页", icon: House },
-  { href: "/search", label: "搜索", icon: Search },
-  { href: "/library", label: "曲库", icon: Library },
-  { href: "/train", label: "训记", icon: Dumbbell },
+  { href: "/", label: "首页", icon: House, color: "#FF9F0A" },
+  { href: "/search", label: "搜索", icon: Search, color: "#FF2D55" },
+  { href: "/library", label: "曲库", icon: Library, color: "#30D158" },
+  { href: "/train", label: "训记", icon: Dumbbell, color: "#5E5CE6" },
 ]
 
 export function BootScreen() {
   return (
-    <div className="grid min-h-dvh place-items-center bg-background text-foreground">
+    <div className="grid min-h-dvh place-items-center bg-[#f2f2f7] text-[#1c1c1e]">
       <div className="text-center">
-        <div className="text-xs tracking-[0.28em] text-ember uppercase">PulseFit</div>
-        <div className="mt-2 text-3xl font-semibold">燃律</div>
+        <BrandMark className="mx-auto size-16" />
+        <div className="t-1 mt-4">燃律</div>
+        <div className="t-caption mt-1 text-[color:var(--label-secondary)]">PulseFit</div>
       </div>
     </div>
   )
@@ -45,43 +46,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const onPlayRoute = pathname === "/play"
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
+    <div className="min-h-dvh bg-[#f2f2f7] text-[#1c1c1e]">
       <ThemeBridge />
-      <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
-        <div className="relative min-h-dvh border-white/6 lg:border-r">
-          <div className="flex items-center justify-between px-4 pt-4 text-xs text-muted-foreground">
-            <span className="tracking-[0.22em] text-ember uppercase">PulseFit</span>
-            <span className="flex gap-3">
-              <Link href="/session" className="hover:text-foreground">
+      <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[minmax(0,430px)_minmax(0,1fr)]">
+        <div className="relative min-h-dvh lg:border-r lg:border-black/8">
+          <div className="flex items-center justify-between px-5 pt-[max(0.7rem,env(safe-area-inset-top))]">
+            <BrandMark className="size-8" />
+            <span className="flex items-center gap-3">
+              <Link href="/session" className="ios-link flex items-center gap-1 t-sub">
+                <Timer className="size-4" />
                 间歇
               </Link>
-              <Link href="/sources" className="hover:text-foreground">
+              <Link href="/sources" className="ios-link flex items-center gap-1 t-sub">
+                <AudioLines className="size-4" />
                 音源
               </Link>
-              <Link href="/me" className="hover:text-foreground">
+              <Link href="/me" className="ios-link flex items-center gap-1 t-sub">
+                <UserRound className="size-4" />
                 我的
               </Link>
             </span>
           </div>
-          <div className={cn("px-4 pt-3 pb-40 sm:px-5", player.now ? "pb-48" : "pb-32")}>
+          <div className="px-5 pt-3 pb-[calc(10.5rem+env(safe-area-inset-bottom))]">
             {player.error ? (
-              <div className="mb-4 rounded-2xl border border-ember/40 bg-ember/10 px-3 py-2 text-sm text-ember" role="alert">
+              <div className="ios-card mb-4 px-3.5 py-2.5 text-sm text-[#ff3b30]" role="alert">
                 {player.error}
               </div>
             ) : null}
             {player.notice ? (
-              <div className="mb-4 flex items-start justify-between gap-3 rounded-2xl bg-white/8 px-3 py-2 text-sm text-foreground">
+              <div className="ios-card mb-4 flex items-start justify-between gap-3 px-3.5 py-2.5 text-sm">
                 <p>{player.notice}</p>
-                <button type="button" className="shrink-0 text-xs text-muted-foreground" onClick={player.dismissNotice}>
+                <button type="button" className="ios-link shrink-0 text-[13px]" onClick={player.dismissNotice}>
                   知道了
                 </button>
               </div>
             ) : null}
             {children}
           </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-[max(0.7rem,env(safe-area-inset-bottom))]">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))]">
             <MiniPlayer onOpen={() => setOpen(true)} />
-            <nav className="glass pointer-events-auto rounded-full px-2">
+            <nav className="liquid-glass pointer-events-auto rounded-[28px] px-1.5 py-1">
               <ul className="grid grid-cols-4">
                 {nav.map((item) => {
                   const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
@@ -90,14 +94,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        className={cn(
-                          "flex flex-col items-center gap-1 py-2.5 text-[11px]",
-                          active ? "text-foreground" : "text-muted-foreground"
-                        )}
+                        className="flex flex-col items-center gap-0.5 py-1.5"
+                        style={{ color: item.color, opacity: active ? 1 : 0.42 }}
                         aria-current={active ? "page" : undefined}
                       >
-                        <Icon className="size-5" />
-                        {item.label}
+                        <Icon className="size-[23px]" strokeWidth={active ? 2.4 : 1.75} />
+                        <span className="text-[10px] leading-3 font-medium tracking-tight">{item.label}</span>
                       </Link>
                     </li>
                   )
@@ -106,7 +108,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
         </div>
-        <aside className="hidden lg:block">
+        <aside className="hidden bg-[#f2f2f7] lg:block">
           <div className="sticky top-0 h-dvh">
             <NowPlaying />
           </div>
@@ -114,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {open && !onPlayRoute ? (
-        <div className="fixed inset-0 z-40 overflow-y-auto bg-background/80 backdrop-blur-xl lg:hidden">
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-[#f2f2f7]/88 backdrop-blur-2xl lg:hidden">
           <NowPlaying onClose={() => setOpen(false)} />
         </div>
       ) : null}
@@ -122,14 +124,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Dialog open={Boolean(player.summary)} onOpenChange={(value) => !value && player.dismissSummary()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{player.summary?.finished ? "这轮练完了" : "训练已记下"}</DialogTitle>
+            <DialogTitle className="t-3">{player.summary?.finished ? "这轮练完了" : "训练已记下"}</DialogTitle>
             <DialogDescription>
               {player.summary
                 ? `${player.summary.planName} · ${formatClock(player.summary.durationSec)} · ${player.summary.bpm} BPM`
                 : ""}
             </DialogDescription>
           </DialogHeader>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="t-sub text-[#3a3a3c]">
             {player.summary?.finished
               ? "间歇记录在「我的」里。力量组数在「训记」。"
               : "这次提前结束了，时长仍然记着。"}

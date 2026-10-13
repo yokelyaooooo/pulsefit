@@ -31,7 +31,7 @@ export function FocusScreen() {
   if (!focus) {
     return (
       <div className="space-y-3">
-        <h1 className="text-3xl font-semibold">没有这个训练页</h1>
+        <h1 className="t-1">没有这个训练页</h1>
         <Link href="/" className="text-sm text-muted-foreground">
           回首页
         </Link>
@@ -54,13 +54,14 @@ export function FocusScreen() {
   return (
     <div className="space-y-6">
       <header
-        className="rounded-[2rem] p-5 text-white"
-        style={{ background: `linear-gradient(160deg, ${focus.accent}, ${focus.ink})` }}
+        className="relative overflow-hidden rounded-[22px] p-5 text-white shadow-[0_14px_30px_rgba(28,28,30,0.12)]"
+        style={{ background: `linear-gradient(155deg, ${focus.accent2}, ${focus.accent} 68%)` }}
       >
-        <p className="text-xs tracking-[0.18em] uppercase opacity-80">{focus.kind === "day" ? "训练日" : "动作"}</p>
-        <h1 className="mt-2 text-4xl font-semibold">{focus.name}</h1>
-        <p className="mt-3 text-sm leading-6 opacity-90">{focus.blurb}</p>
-        <p className="mt-4 text-xs opacity-80">
+        <span className="pointer-events-none absolute -top-10 -right-8 size-32 rounded-full bg-white/25" />
+        <p className="t-caption relative text-white/80">{focus.kind === "day" ? "训练日" : "动作"}</p>
+        <h1 className="t-large relative mt-1">{focus.name}</h1>
+        <p className="t-sub relative mt-2 text-white/90">{focus.blurb}</p>
+        <p className="t-caption relative mt-4 text-white/80">
           目标 {focus.targetBpm} BPM · 强度 {Math.round(focus.intensity * 100)} · {pinned ? "你的歌单" : "按类型、强度和 BPM 自动推荐"}
         </p>
       </header>
@@ -86,8 +87,8 @@ export function FocusScreen() {
             const track = tracks.find((item) => item.id === id)
             if (!track) return null
             return (
-              <li key={id} className="flex items-center gap-3 rounded-2xl bg-white/5 px-2 py-2">
-                <CoverArt seed={track.id} title={track.title} className="size-12 rounded-xl" />
+              <li key={id} className="ios-row flex items-center gap-3 px-2 py-2">
+                <CoverArt seed={track.id} title={track.title} className="size-12 rounded-[12px]" />
                 <button
                   type="button"
                   className="min-w-0 flex-1 text-left"
@@ -112,15 +113,16 @@ export function FocusScreen() {
 
       {suggestions.length > 0 ? (
         <section>
-          <h2 className="mb-2 text-sm text-muted-foreground">还可以加上</h2>
-          <div className="flex flex-wrap gap-2">
+          <h2 className="t-2 mb-3">还可以加上</h2>
+          <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
             {suggestions.map((id) => {
               const track = tracks.find((item) => item.id === id)
               if (!track) return null
               return (
-                <Button key={id} size="sm" variant="secondary" onClick={() => save([...ids, id])}>
-                  {track.title}
-                </Button>
+                <button key={id} type="button" className="w-[104px] shrink-0 text-left" onClick={() => save([...ids, id])}>
+                  <CoverArt seed={track.id} title={track.title} className="aspect-square w-full rounded-[14px]" />
+                  <span className="t-caption mt-1.5 block truncate">{track.title}</span>
+                </button>
               )
             })}
           </div>

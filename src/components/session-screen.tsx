@@ -1,12 +1,12 @@
 "use client"
 
 import { Activity, Dumbbell, Flame, Flower2, Moon, Square } from "lucide-react"
+import { Paint } from "@/components/artwork"
 import { usePersistedStore } from "@/components/use-persisted-store"
 import { BeatRing } from "@/components/beat-ring"
 import { usePlayer } from "@/components/player-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { getPlan, plans, tagLabel } from "@/lib/catalog"
 import type { WorkoutTag } from "@/lib/types"
@@ -30,38 +30,24 @@ export function SessionScreen() {
     return (
       <div className="space-y-5">
         <header>
-          <h1 className="text-3xl font-semibold tracking-tight">训练</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            做功段把鼓和贝斯推上去，休息段只留底。时钟和音乐一起走。
-          </p>
+          <h1 className="t-large">训练</h1>
+          <p className="t-sub mt-1">做功段把鼓和贝斯推上去，休息段只留底。时钟和音乐一起走。</p>
         </header>
-        <ul className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {plans.map((item) => {
             const Icon = icons[item.tag]
             return (
-              <li key={item.id}>
-                <Card>
-                  <CardContent className="flex items-start gap-3">
-                    <Icon className="mt-0.5 size-5 text-ember" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h2 className="font-medium">{item.name}</h2>
-                        <Badge variant="outline">{tagLabel[item.tag]}</Badge>
-                      </div>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.blurb}</p>
-                      <p className="mt-2 text-xs text-gold tabular-nums">
-                        {item.bpm} BPM · {formatClock(planDuration(item))}
-                      </p>
-                      <Button className="mt-3 h-10 rounded-full px-4" onClick={() => void player.startWorkout(item.id)}>
-                        开始
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </li>
+              <button key={item.id} type="button" className="text-left" onClick={() => void player.startWorkout(item.id)}>
+                <Paint tone={item.tag} className="flex h-[148px] flex-col justify-end rounded-[18px] p-3.5 shadow-[0_12px_24px_rgba(28,28,30,0.12)]">
+                  <Icon className="absolute top-3.5 left-3.5 size-7" />
+                  <span className="t-caption relative text-white/80">{tagLabel[item.tag]}</span>
+                  <span className="t-headline relative">{item.name}</span>
+                  <span className="t-caption relative text-white/80">{item.bpm} BPM · {formatClock(planDuration(item))}</span>
+                </Paint>
+              </button>
             )
           })}
-        </ul>
+        </div>
       </div>
     )
   }
@@ -74,8 +60,8 @@ export function SessionScreen() {
     <div className="space-y-6">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs tracking-[0.22em] text-ember uppercase">{tagLabel[plan.tag]}</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{plan.name}</h1>
+          <p className="t-caption text-[#ff3b30]">{tagLabel[plan.tag]}</p>
+          <h1 className="t-large mt-1">{plan.name}</h1>
         </div>
         <Badge variant={resting ? "secondary" : "default"}>{resting ? "休息" : "做功"}</Badge>
       </header>
