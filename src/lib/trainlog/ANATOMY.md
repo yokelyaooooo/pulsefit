@@ -2,7 +2,7 @@
 
 `anatomy.json` 里的身体轮廓和肌肉分区路径来自 [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter) 3.2.0（MIT）。
 
-头部是空白轮廓，没有五官。燃律只把路径拿来上色，没有改路径形状。
+`anatomy-female.json` 的女性正面、背面轮廓与肌肉路径来自同一项目的女性人体资源（MIT）。燃律保留解剖分区，增加连续轮廓底色、柔和明暗及目标肌群高亮，支持切换男女模型。
 
 MIT License
 

@@ -6,16 +6,16 @@ const config: CapacitorConfig = {
   appId: "com.pulsefit.app",
   appName: "燃律",
   webDir: "www",
-  backgroundColor: "#09090b",
+  backgroundColor: "#f7f6fb",
   server: serverUrl
     ? { url: serverUrl, cleartext: serverUrl.startsWith("http://"), androidScheme: "https" }
     : { androidScheme: "https" },
   ios: {
-    backgroundColor: "#09090b",
+    backgroundColor: "#f7f6fb",
     contentInset: "automatic",
   },
   android: {
-    backgroundColor: "#09090b",
+    backgroundColor: "#f7f6fb",
     allowMixedContent: Boolean(serverUrl?.startsWith("http://")),
   },
 }

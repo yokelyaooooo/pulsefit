@@ -1,0 +1,14 @@
+.map { width: 100%; min-width: 0; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 2px 10px; }
+.toolbar > span { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #9d8bac; }
+.toolbar i { width: 5px; height: 5px; border-radius: 50%; background: #9774c1; }
+.toolbar > div { display: flex; gap: 2px; padding: 3px; border-radius: 20px; background: #dfd6ec70; }
+.toolbar button { min-width: 34px; height: 26px; font-size: 11px; border-radius: 15px; color: #a08bac; font-weight: 500; }
+.toolbar button[aria-pressed="true"] { color: #755798; background: #fffffff2; box-shadow: 0 2px 6px #6d488012; font-weight: 600; }
+.toolbar button:focus-visible { outline: 2px solid #9978bb; outline-offset: 2px; }
+.figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; max-width: 380px; margin-inline: auto; }
+.figure { min-width: 0; }
+.body { display: block; height: 250px; width: 100%; margin-inline: auto; filter: drop-shadow(0 3px 4px #67507c0b); }
+.labels { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 7px; }
+.labels li { background: #a280c710; border: 1px solid #a280c71c; color: #8a6aa9; border-radius: 12px; padding: 2px 6px; font-size: 9px; line-height: 1.5; }
+@media (max-width: 400px) { .body { height: 215px; } .toolbar > span { font-size: 9px; } }

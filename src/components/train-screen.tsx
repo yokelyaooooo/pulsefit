@@ -2,418 +2,71 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
-import { Paint } from "@/components/artwork"
-import { ExerciseIcon } from "@/components/exercise-icon"
+import { ArrowRight, CalendarDays, Check, ChevronRight, Dumbbell, Flame, Plus, Search, Sparkles, Trophy } from "lucide-react"
 import { MuscleMap } from "@/components/muscle-map"
+import { ExerciseIcon } from "@/components/exercise-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { builtinExercises, getBuiltinExercise } from "@/lib/trainlog/exercises"
-import { activeMuscles, estimateKcal, formatLoad, logCardioSeconds, logVolumeKg, shareCardSvg } from "@/lib/trainlog/stats"
-import { allPlans, findExercise, getServerTrainSnapshot, getTrainSnapshot, hydrateTrain, subscribeTrain, updateTrain } from "@/lib/trainlog/store"
-import { muscleLabel, type LoadMode, type MuscleId, type SetEntry, type SetKind, type WorkoutLog } from "@/lib/trainlog/types"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { WorkoutEditor, WorkoutSummary, saveWorkout, useTrainClock } from "@/components/train-workout"
+import { allExercises, allPlans, findExercise, getServerTrainSnapshot, getTrainSnapshot, hydrateTrain, subscribeTrain } from "@/lib/trainlog/store"
+import { logVolumeKg } from "@/lib/trainlog/stats"
+import { completedSets, createEntry, finishWorkout, localDay, newId } from "@/lib/trainlog/workouts"
+import { muscleLabel, type MuscleId, type WorkoutLog } from "@/lib/trainlog/types"
+import "@/components/train.css"
 
-const serverDay = { day: "" }
-let daySnapshot = serverDay
-const dayListeners = new Set<() => void>()
-
-function subscribeDay(listener: () => void) {
-  dayListeners.add(listener)
-  return () => dayListeners.delete(listener)
-}
-
-function publishDay() {
-  const now = new Date()
-  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
-  daySnapshot = { day }
-  dayListeners.forEach((listener) => listener())
-}
-
-function nid() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
-}
-
-function blankSet(mode: LoadMode, kind: SetKind): SetEntry {
-  return {
-    id: nid(),
-    kind,
-    mode,
-    kg: kind === "warmup" ? 20 : 0,
-    kgRight: mode === "dumbbell" ? (kind === "warmup" ? 20 : 0) : null,
-    reps: kind === "cardio" ? 0 : 8,
-    seconds: kind === "cardio" ? 60 : 0,
-    label: kind === "cardio" ? "划船机" : "",
-  }
-}
+const focusLabels: Record<string, string> = { push: "胸 · 肩 · 三头", pull: "背 · 二头", legs: "腿 · 臀", shoulders: "肩部专项", cardio: "心肺 · 耐力", core: "核心稳定" }
 
 export function TrainScreen() {
   const train = useSyncExternalStore(subscribeTrain, getTrainSnapshot, getServerTrainSnapshot)
-  const clock = useSyncExternalStore(subscribeDay, () => daySnapshot, () => serverDay)
+  const now = useTrainClock()
   const [picker, setPicker] = useState(false)
-  const [filter, setFilter] = useState("")
-  const day = clock.day
-  const open = train.logs.find((log) => log.date === day && !log.endedAt) ?? null
-  const done = train.logs.filter((log) => log.date === day && log.endedAt)
+  const [query, setQuery] = useState("")
+  const [muscle, setMuscle] = useState<MuscleId | "">("")
+  const [finishOpen, setFinishOpen] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState("plan-shoulders")
+  const day = now ? localDay(new Date(now)) : ""
+  const active = train.logs.find((log) => !log.endedAt) ?? null
+  const finished = train.logs.filter((log) => log.endedAt)
+  const todayDone = finished.filter((log) => log.date === day)
+  const plans = allPlans(train)
+  const plan = plans.find((item) => item.id === selectedPlan) ?? plans[0]
+  const all = allExercises(train)
+  const muscles = [...new Set(plan?.exerciseIds.flatMap((id) => findExercise(train, id)?.muscles ?? []) ?? [])]
+  const thisMonth = finished.filter((log) => log.date.startsWith(day.slice(0, 7)))
+  const week = Array.from({ length: 7 }, (_, index) => { const date = new Date(now || "2026-01-01T12:00:00"); date.setDate(date.getDate() - (date.getDay() + 6) % 7 + index); return localDay(date) })
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      publishDay()
-      hydrateTrain()
-    })
-  }, [])
+  useEffect(() => { queueMicrotask(hydrateTrain) }, [])
 
-  function write(log: WorkoutLog) {
-    const logs = getTrainSnapshot().logs.some((item) => item.id === log.id)
-      ? getTrainSnapshot().logs.map((item) => (item.id === log.id ? log : item))
-      : [log, ...getTrainSnapshot().logs]
-    updateTrain({ logs })
+  function start(planId?: string) {
+    if (!day || getTrainSnapshot().logs.some((log) => !log.endedAt)) return
+    const selected = plans.find((item) => item.id === planId)
+    const log: WorkoutLog = { id: newId(), date: day, title: selected?.name ?? "自由训练", planId: selected?.id ?? null, focusId: selected?.focus ?? null, startedAt: new Date().toISOString(), endedAt: null, durationSec: 0, restSeconds: 90, exercises: selected?.exerciseIds.flatMap((id) => { const exercise = findExercise(train, id); return exercise ? [createEntry(exercise, train.logs)] : [] }) ?? [] }
+    saveWorkout(log)
   }
 
-  function startFromPlan(planId: string) {
-    if (!day) return
-    const plan = allPlans(getTrainSnapshot()).find((item) => item.id === planId)
-    if (!plan) return
-    const state = getTrainSnapshot()
-    write({
-      id: nid(),
-      date: day,
-      title: plan.name,
-      planId: plan.id,
-      focusId: plan.focus,
-      startedAt: new Date().toISOString(),
-      endedAt: null,
-      durationSec: 0,
-      exercises: plan.exerciseIds.flatMap((exerciseId) => {
-        const exercise = findExercise(state, exerciseId)
-        if (!exercise) return []
-        return [{ id: nid(), exerciseId, name: exercise.name, sets: [blankSet(exercise.defaultMode, "work")] }]
-      }),
-    })
-  }
-
-  function addExercise(exerciseId: string) {
-    if (!open) return
-    const exercise = findExercise(getTrainSnapshot(), exerciseId)
-    if (!exercise) return
-    write({
-      ...open,
-      exercises: [
-        ...open.exercises,
-        { id: nid(), exerciseId, name: exercise.name, sets: [blankSet(exercise.defaultMode, "work")] },
-      ],
-    })
-    setPicker(false)
-  }
-
-  function patchSet(exerciseEntryId: string, setId: string, patch: Partial<SetEntry>) {
-    if (!open) return
-    write({
-      ...open,
-      exercises: open.exercises.map((exercise) =>
-        exercise.id === exerciseEntryId
-          ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...patch } : set)) }
-          : exercise
-      ),
-    })
-  }
-
-  function finish(log: WorkoutLog) {
-    const durationSec = Math.max(1, Math.round((Date.now() - Date.parse(log.startedAt)) / 1000))
-    write({ ...log, endedAt: new Date().toISOString(), durationSec })
-  }
-
-  const exercises = [...builtinExercises, ...train.customExercises]
-
-  const headline = open?.title ?? done[0]?.title ?? "今天"
-
-  return (
-    <div className="space-y-5">
-      <header>
-        <p className="t-sub">{formatDay(day)}</p>
-        <div className="mt-0.5 flex items-end justify-between gap-3">
-          <h1 className="t-large">{headline}</h1>
-          <div className="flex gap-4 pb-1.5">
-            <Link href="/train/library" className="ios-link t-sub">
-              动作库
-            </Link>
-            <Link href="/train/history" className="ios-link t-sub">
-              历史
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {!day ? <p className="text-sm text-muted-foreground">正在打开今天的训练。</p> : null}
-
-      {done.map((log) => (
-        <Summary key={log.id} log={log} />
-      ))}
-
-      {day && !open ? (
-        <section className="space-y-3">
-          <h2 className="t-2">{done.length ? "再开一轮" : "开始训练"}</h2>
-          {done.length ? null : <p className="t-sub">选一个计划，或先建一个空的。</p>}
-          <div className="grid grid-cols-2 gap-2.5">
-            {allPlans(train).map((plan) => (
-              <button
-                key={plan.id}
-                type="button"
-                className="overflow-hidden rounded-[18px] text-left shadow-[0_10px_24px_rgba(28,28,30,0.08)]"
-                onClick={() => startFromPlan(plan.id)}
-              >
-                <Paint tone={plan.focus} className="flex h-[132px] flex-col justify-end p-3">
-                  <span className="absolute top-3 left-3 flex">
-                    {plan.exerciseIds.slice(0, 3).map((id) => {
-                      const exercise = getBuiltinExercise(id)
-                      return exercise ? <ExerciseIcon key={id} exerciseId={exercise.id} className="size-8 rounded-[8px]" /> : null
-                    })}
-                  </span>
-                  <span className="t-headline relative">{plan.name}</span>
-                  <span className="t-caption relative line-clamp-1 text-white/80">{plan.blurb}</span>
-                </Paint>
-              </button>
-            ))}
-          </div>
-          <Button
-            variant="secondary"
-            onClick={() =>
-              write({
-                id: nid(),
-                date: day,
-                title: "自定义训练",
-                planId: null,
-                focusId: null,
-                startedAt: new Date().toISOString(),
-                endedAt: null,
-                durationSec: 0,
-                exercises: [],
-              })
-            }
-          >
-            空白记录
-          </Button>
-        </section>
-      ) : null}
-
-      {open ? <LogEditor log={open} onPatch={patchSet} onAddSet={(entryId, kind) => {
-        const entry = open.exercises.find((item) => item.id === entryId)
-        const exercise = entry ? findExercise(train, entry.exerciseId) : undefined
-        patchAdd(open, entryId, blankSet(exercise?.defaultMode ?? "barbell", kind), write)
-      }} onRemoveSet={(entryId, setId) => {
-        write({
-          ...open,
-          exercises: open.exercises.map((exercise) =>
-            exercise.id === entryId ? { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) } : exercise
-          ),
-        })
-      }} /> : null}
-
-      {open ? (
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setPicker(true)}>
-            加动作
-          </Button>
-          <Button onClick={() => finish(open)}>完成今天</Button>
-        </div>
-      ) : null}
-
-      <Dialog open={picker} onOpenChange={setPicker}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>加一个动作</DialogTitle>
-          </DialogHeader>
-          <Input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="搜动作" aria-label="搜动作" />
-          <ul className="max-h-80 space-y-1 overflow-y-auto">
-            {exercises
-              .filter((exercise) => exercise.name.includes(filter.trim()))
-              .map((exercise) => (
-                <li key={exercise.id}>
-                  <button type="button" className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-black/4" onClick={() => addExercise(exercise.id)}>
-                    <ExerciseIcon exerciseId={exercise.id} className="size-9" />
-                    <span>
-                      <span className="block text-sm font-medium">{exercise.name}</span>
-                      <span className="block text-xs text-muted-foreground">{exercise.muscles.map((id) => muscleLabel[id]).join(" · ")}</span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-function patchAdd(log: WorkoutLog, entryId: string, set: SetEntry, write: (log: WorkoutLog) => void) {
-  write({
-    ...log,
-    exercises: log.exercises.map((exercise) =>
-      exercise.id === entryId ? { ...exercise, sets: [...exercise.sets, set] } : exercise
-    ),
-  })
-}
-
-function LogEditor({
-  log,
-  onPatch,
-  onAddSet,
-  onRemoveSet,
-}: {
-  log: WorkoutLog
-  onPatch: (entryId: string, setId: string, patch: Partial<SetEntry>) => void
-  onAddSet: (entryId: string, kind: SetKind) => void
-  onRemoveSet: (entryId: string, setId: string) => void
-}) {
-  return (
-    <div className="ios-card space-y-1 p-4">
-      {log.exercises.length === 0 ? <p className="t-sub">还没有动作。</p> : null}
-      {log.exercises.map((exercise) => {
-        const def = findExercise(getTrainSnapshot(), exercise.exerciseId)
-        return (
-          <section key={exercise.id} className="border-b border-black/6 py-3 last:border-0">
-            <div className="flex items-center gap-3">
-              <ExerciseIcon exerciseId={def?.id ?? exercise.exerciseId} className="size-10" />
-              <h3 className="t-headline">{exercise.name}</h3>
-            </div>
-            <ul className="mt-3 space-y-2">
-              {exercise.sets.map((set, index) => (
-                <li key={set.id} className="rounded-[12px] bg-[var(--fill)] p-2">
-                  <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      {set.kind === "warmup" ? "热身" : set.kind === "cardio" ? "组间有氧" : `第 ${index + 1} 组`} · {formatLoad(set)}
-                    </span>
-                    <button type="button" onClick={() => onRemoveSet(exercise.id, set.id)}>
-                      删除
-                    </button>
-                  </div>
-                  {set.kind === "cardio" ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input aria-label="有氧名称" value={set.label} onChange={(event) => onPatch(exercise.id, set.id, { label: event.target.value })} />
-                      <Input aria-label="秒" type="number" value={set.seconds} onChange={(event) => onPatch(exercise.id, set.id, { seconds: Number(event.target.value) })} />
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      <Input aria-label={set.mode === "dumbbell" ? "左侧公斤" : "公斤"} type="number" value={set.kg} onChange={(event) => onPatch(exercise.id, set.id, { kg: Number(event.target.value) })} />
-                      {set.mode === "dumbbell" ? (
-                        <Input aria-label="右侧公斤" type="number" value={set.kgRight ?? set.kg} onChange={(event) => onPatch(exercise.id, set.id, { kgRight: Number(event.target.value) })} />
-                      ) : (
-                        <span className="self-center text-center text-xs text-muted-foreground">kg</span>
-                      )}
-                      <Input aria-label="次数" type="number" value={set.reps} onChange={(event) => onPatch(exercise.id, set.id, { reps: Number(event.target.value) })} />
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary" onClick={() => onAddSet(exercise.id, "work")}>正式组</Button>
-              <Button size="sm" variant="secondary" onClick={() => onAddSet(exercise.id, "warmup")}>热身</Button>
-              <Button size="sm" variant="secondary" onClick={() => onAddSet(exercise.id, "cardio")}>组间有氧</Button>
-            </div>
-          </section>
-        )
-      })}
-    </div>
-  )
-}
-
-function Summary({ log }: { log: WorkoutLog }) {
-  const volume = logVolumeKg(log)
-  const cardio = logCardioSeconds(log)
-  const kcal = estimateKcal(volume, cardio, log.durationSec)
-  const muscles = activeMuscles(log, (id) => findExercise(getTrainSnapshot(), id))
-  return (
-    <section className="ios-card p-4">
-      <div className="grid grid-cols-[minmax(0,1fr)_92px] items-center gap-2">
-        <MuscleMap active={muscles} />
-        <div className="space-y-4 text-right">
-          <Stat label="消耗 (大卡)" value={String(kcal)} />
-          <Stat label="总重量 (kg)" value={String(Math.round(volume))} />
-          <Stat label="总耗时" value={formatDuration(log.durationSec)} />
-        </div>
-      </div>
-      <div className="mt-2 space-y-4 border-t border-black/6 pt-4">
-        {log.exercises.map((exercise) => (
-          <div key={exercise.id}>
-            <div className="flex items-center gap-2.5">
-              <ExerciseIcon exerciseId={exercise.exerciseId} className="size-9" />
-              <h3 className="t-headline">{exercise.name}</h3>
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-              {exercise.sets.map((set, index) => (
-                <span key={set.id} className="inline-flex items-baseline gap-1.5 t-sub text-[#3a3a3c]">
-                  <span className="text-[#8e8e93] tabular-nums">{index + 1}</span>
-                  <span>{formatLoad(set)}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="t-caption mt-4 leading-5 text-[color:var(--label-secondary)]">
-        练到 {muscles.map((id: MuscleId) => muscleLabel[id]).join("、") || "还没有部位"}。热量是估算：容量×0.004 + 组间有氧秒×0.12 + 分钟×3.2，不是医学测量。热身不计入容量。
-      </p>
-      <Button
-        variant="secondary"
-        className="mt-3"
-        onClick={() => {
-          const svg = shareCardSvg({
-            title: log.title,
-            date: log.date,
-            volumeKg: volume,
-            kcal,
-            durationSec: log.durationSec,
-            muscles: muscles.map((id) => muscleLabel[id]),
-          })
-          const file = new File([svg], `pulsefit-${log.date}.svg`, { type: "image/svg+xml" })
-          const share = navigator.share?.bind(navigator)
-          if (share) {
-            void share({ files: [file], title: log.title }).catch(() => download(svg, log.date))
-            return
-          }
-          download(svg, log.date)
-        }}
-      >
-        分享卡片
-      </Button>
-    </section>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[28px] leading-8 font-semibold tracking-[-0.4px] tabular-nums">{value}</div>
-      <div className="t-caption text-[color:var(--label-secondary)]">{label}</div>
-    </div>
-  )
-}
-
-function formatDay(day: string) {
-  if (!day) return "今天"
-  const date = new Date(`${day}T12:00:00`)
-  const week = "日一二三四五六"[date.getDay()] ?? ""
-  return `${day} 周${week}`
-}
-
-function formatDuration(seconds: number) {
-  const minutes = Math.max(1, Math.round(seconds / 60))
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  const rest = minutes % 60
-  return rest ? `${hours}h ${rest}m` : `${hours}h`
-}
-
-function download(svg: string, date: string) {
-  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))
-  const link = document.createElement("a")
-  link.href = url
-  link.download = `pulsefit-${date}.svg`
-  link.click()
-  URL.revokeObjectURL(url)
+  return <div className="train-page">
+    <header className="train-page-header"><div><p className="train-eyebrow">YOUR DAILY PROGRESS</p><h1>训练记录<span className="train-heading-dot">.</span></h1><p>{day ? new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "long" }).format(new Date(now)) : "记录每一次进步"}</p></div><Link className="train-round-link" href="/train/history" aria-label="训练日历"><CalendarDays size={21} /></Link></header>
+    <nav className="train-section-nav" aria-label="训练导航"><Link href="/train" aria-current="page">训练</Link><Link href="/train/history">历史与统计</Link><Link href="/train/library">动作与计划</Link></nav>
+    {active ? <>
+      <div className="train-section-heading"><div><span className="train-status"><span />正在训练</span><h2>{active.title}</h2></div><span className="train-small">实时保存</span></div>
+      {active.date !== day && <p className="train-small">继续 {active.date} 开始的训练。完成后可在历史记录里调整时长。</p>}
+      <WorkoutEditor log={active} onChange={saveWorkout} />
+      <div className="train-editor-actions"><Button variant="secondary" onClick={() => setPicker(true)}><Plus size={17} />添加动作</Button><Button className="train-primary" disabled={completedSets(active) === 0} onClick={() => setFinishOpen(true)}><Check size={17} />完成训练</Button></div>
+      <button className="train-text-button" onClick={() => { if (window.confirm("放弃这次训练？当前未完成记录将被移除。")) { const state = getTrainSnapshot(); import("@/lib/trainlog/store").then(({ updateTrain }) => updateTrain({ logs: state.logs.filter((log) => log.id !== active.id) })) } }}>放弃本次训练</button>
+    </> : <>
+      <div className="train-month-stats"><div><span><Flame size={15} />本月训练</span><strong>{thisMonth.length}<small>次</small></strong></div><div><span><Dumbbell size={15} />累计容量</span><strong>{(thisMonth.reduce((sum, log) => sum + logVolumeKg(log), 0) / 1000).toFixed(1)}<small>吨</small></strong></div><div><span><Trophy size={15} />累计坚持</span><strong>{new Set(finished.map((log) => log.date)).size}<small>天</small></strong></div></div>
+      <div className="train-week"><div><strong>这一周，保持节奏</strong><Link href="/train/history">训练日历<ChevronRight size={13} /></Link></div><div className="train-week-days">{week.map((date, i) => { const done = finished.some((log) => log.date === date); return <Link key={date} href={`/train/history?date=${date}`} className={`${date === day ? "is-today" : ""} ${done ? "is-done" : ""}`}><span>{"一二三四五六日"[i]}</span><strong>{done ? <Check size={17} /> : Number(date.slice(-2))}</strong><i /></Link> })}</div></div>
+      {todayDone.length > 0 && <section><div className="train-section-heading"><h2>今天的进步</h2><span className="train-small">{todayDone.length} 次训练</span></div>{todayDone.map((log) => <WorkoutSummary log={log} key={log.id} />)}</section>}
+      <section><div className="train-section-heading"><div><p className="train-eyebrow">LET’S GET STRONGER</p><h2>{todayDone.length ? "再出发" : "今天，练出好状态"}</h2></div><Link href="/train/library">管理计划<ChevronRight size={15} /></Link></div>
+        {plan && <article className="train-plan-hero"><div className="train-plan-copy"><span className="train-plan-kicker"><Sparkles size={13} />你的训练计划</span><h3>{plan.name}</h3><p>{focusLabels[plan.focus]}</p><span>{plan.exerciseIds.length} 个动作 · 约 {plan.exerciseIds.length * 8} 分钟</span><Button className="train-primary" disabled={!day} onClick={() => start(plan.id)}>开始训练<ArrowRight size={17} /></Button></div><div className="train-plan-anatomy"><MuscleMap active={muscles} /></div></article>}
+        <div className="train-plan-options">{plans.map((item) => <button type="button" key={item.id} aria-pressed={plan?.id === item.id} onClick={() => setSelectedPlan(item.id)}><Dumbbell size={16} /><span>{item.name}</span><small>{item.exerciseIds.length} 动作</small>{plan?.id === item.id && <Check size={14} />}</button>)}</div>
+        <button className="train-free-start" disabled={!day} onClick={() => start()}><span><Plus size={20} /><span><strong>自由训练</strong><small>按自己的节奏，随时添加动作</small></span></span><ArrowRight size={18} /></button>
+      </section>
+      {finished.length > 0 && <Link href="/train/history" className="train-recent-link"><CalendarDays size={20} /><div><strong>上一次 · {finished[0].title}</strong><span>{finished[0].date} · {finished[0].exercises.length} 个动作 · {Math.round(logVolumeKg(finished[0])).toLocaleString()} kg</span></div><ChevronRight size={18} /></Link>}
+      <p className="train-bottom-note">每一组，每一次，都是向前。<span>MAKE EVERY REP COUNT</span></p>
+    </>}
+    <Dialog open={picker} onOpenChange={setPicker}><DialogContent className="train-dialog"><DialogHeader><DialogTitle>添加训练动作</DialogTitle><DialogDescription>选择部位，找到今天想练的动作。</DialogDescription></DialogHeader><div className="train-search-field"><Search size={17} /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索动作名称" aria-label="搜索动作名称" /></div><div className="train-filter-chips"><button className={!muscle ? "active" : ""} onClick={() => setMuscle("")}>全部</button>{(["chest", "lats", "side-delt", "biceps", "triceps", "quads", "glutes", "abs"] as MuscleId[]).map((id) => <button key={id} className={muscle === id ? "active" : ""} onClick={() => setMuscle(id)}>{muscleLabel[id]}</button>)}</div><ul className="train-picker-list">{all.filter((exercise) => exercise.name.includes(query.trim()) && (!muscle || exercise.muscles.includes(muscle))).map((exercise) => <li key={exercise.id}><button onClick={() => { if (active) saveWorkout({ ...active, exercises: [...active.exercises, createEntry(exercise, train.logs)] }); setPicker(false) }}><ExerciseIcon exerciseId={exercise.id} className="size-10" /><span><strong>{exercise.name}</strong><small>{exercise.muscles.map((id) => muscleLabel[id]).join(" · ")}</small></span><Plus size={18} /></button></li>)}</ul></DialogContent></Dialog>
+    <Dialog open={finishOpen} onOpenChange={setFinishOpen}><DialogContent><DialogHeader><DialogTitle>今天练得很棒</DialogTitle><DialogDescription>已完成 {active ? completedSets(active) : 0} 组。保存后可以查看训练总结、导出记录卡。未勾选的组不会计入记录。</DialogDescription></DialogHeader><Button className="train-primary" onClick={() => { if (active) saveWorkout(finishWorkout(active)); setFinishOpen(false) }}>保存训练记录</Button></DialogContent></Dialog>
+  </div>
 }

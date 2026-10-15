@@ -6,7 +6,7 @@ import type { ExerciseDef, PlanDef, TrainState, WorkoutLog } from "@/lib/trainlo
 export const TRAIN_KEY = "pulsefit.train.v1"
 
 export function emptyTrainState(): TrainState {
-  return { logs: [], customExercises: [], customPlans: [] }
+  return { logs: [], customExercises: [], customPlans: [], bodyGender: "male" }
 }
 
 function isExercise(value: unknown): value is ExerciseDef {
@@ -34,6 +34,7 @@ export function parseTrainState(raw: string | null): TrainState {
   try {
     const data = JSON.parse(raw) as Partial<TrainState>
     return {
+      bodyGender: data.bodyGender === "female" ? "female" : "male",
       logs: Array.isArray(data.logs) ? data.logs.filter(isLog) : [],
       customExercises: Array.isArray(data.customExercises) ? data.customExercises.filter(isExercise) : [],
       customPlans: Array.isArray(data.customPlans) ? data.customPlans.filter(isPlan) : [],

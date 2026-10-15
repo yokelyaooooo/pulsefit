@@ -7,16 +7,16 @@ export const PROVIDER_NOTES = {
   netease: {
     title: "网易云音乐",
     works:
-      "对接你自己运行的 NeteaseCloudMusicApi（GitHub: Binaryify/NeteaseCloudMusicApi）。支持二维码登录、歌单、搜索、播放地址和歌词。",
+      "使用内置连接扫码登录，支持个人歌单、搜索、播放和歌词。也可在连接设置中使用自己的兼容服务。",
     limit:
-      "网易云没有对这个网页开放官方播放接口。不填写并运行你自己的 API 时，登录和曲库同步不会发生。未登录或非会员经常只能拿到试听，甚至拿不到链接。",
+      "歌曲播放范围由登录账号、会员权益、版权和所在地区决定。",
   },
   qq: {
     title: "QQ 音乐",
     works:
-      "对接你自己运行的 QQMusicApi（GitHub: jsososo/QQMusicApi）。把你自己的 y.qq.com cookie 交给这个本地服务后，可以搜索、同步歌单、取播放地址和歌词。",
+      "使用手机 QQ 扫码连接个人账号，支持歌单同步、搜索、播放和歌词。",
     limit:
-      "这份 API 没有二维码登录。不要粘贴仓库、Issue 或别人机器上的 cookie。会员歌曲没有会员 cookie 时经常没有播放地址。",
+      "需要在手机 QQ 上确认音乐授权；播放范围由平台和账号权益决定。",
   },
   apple: {
     title: "Apple Music",

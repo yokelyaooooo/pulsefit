@@ -1,18 +1,17 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Paint } from "@/components/artwork"
+import Link from "next/link"
+import { ArrowUpRight, Heart, Music2, Pause, Play, Search, Shuffle } from "lucide-react"
 import { CoverArt } from "@/components/cover-art"
-import { Equalizer, VinylDisc, Waveform } from "@/components/music-marks"
+import { MusicHeader, MusicSectionHeading, MusicTrackCard } from "@/components/music-ui"
+import { Equalizer } from "@/components/music-marks"
 import { usePersistedStore } from "@/components/use-persisted-store"
-import { Heart, Pause, Play } from "lucide-react"
 import { usePlayer } from "@/components/player-provider"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { tagLabel, tracks } from "@/lib/catalog"
 import type { WorkoutTag } from "@/lib/types"
 import { formatClock } from "@/lib/audio/clock"
+import "@/components/music-home.css"
 
 const filters = ["all", "saved", "hiit", "strength", "cardio", "yoga", "recover"] as const
 
@@ -27,153 +26,34 @@ export function LibraryScreen() {
     return tracks.filter((track) => {
       if (filter === "saved" && !player.favorites.includes(track.id)) return false
       if (filter !== "all" && filter !== "saved" && track.tag !== filter) return false
-      if (!needle) return true
-      return (
-        track.title.toLowerCase().includes(needle) ||
-        track.titleEn.toLowerCase().includes(needle) ||
-        track.blurb.toLowerCase().includes(needle)
-      )
+      return !needle || [track.title, track.titleEn, track.blurb, String(track.bpm)].join(" ").toLowerCase().includes(needle)
     })
   }, [filter, player.favorites, query])
 
-  return (
-    <div className="space-y-5">
-      <header>
-        <h1 className="t-large flex items-center gap-2">
-          曲库
-          <Equalizer />
-        </h1>
-      </header>
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="t-headline">燃律 PulseFit</h2>
-          <Waveform />
-        </div>
-        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
-          {tracks.slice(0, 8).map((track) => (
-            <button
-              key={track.id}
-              type="button"
-              className="w-[132px] shrink-0 text-left"
-              onClick={() => void player.playTrack(track.id, { queue: tracks.map((item) => item.id) })}
-            >
-              <span className="relative block h-[104px]">
-                <VinylDisc className="size-[80%]" />
-                <CoverArt seed={track.id} title={track.title} className="absolute top-0 left-0 z-10 size-[104px] rounded-[14px]" />
-              </span>
-              <span className="t-caption mt-1 block truncate">{track.title}</span>
-              <span className="t-caption text-[color:var(--label-secondary)]">{track.bpm} BPM</span>
-            </button>
-          ))}
-        </div>
-      </section>
-      <div className="grid grid-cols-4 gap-2">
-        {tracks.slice(0, 4).map((track) => (
-          <button
-            key={track.id}
-            type="button"
-            className="text-left"
-            onClick={() => void player.playTrack(track.id, { queue: tracks.map((item) => item.id) })}
-          >
-            <CoverArt seed={track.id} title={track.title} className="aspect-square w-full rounded-[14px] shadow-[0_8px_16px_rgba(28,28,30,0.12)]" />
-            <span className="t-caption mt-1 block truncate">{track.title}</span>
-          </button>
-        ))}
-      </div>
+  function playAll(shuffle: boolean) {
+    const queue = visible.map((track) => track.id)
+    const first = shuffle ? queue[Math.floor(Math.random() * queue.length)] : queue[0]
+    if (first) void player.playTrack(first, { queue, shuffle, loop: false })
+  }
 
-      <Input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="搜曲名或感觉"
-        aria-label="搜索曲目"
-        className="h-11"
-      />
-
-      <Tabs value={filter} onValueChange={(value) => setFilter(value as (typeof filters)[number])}>
-        <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-full bg-[var(--fill)] p-1">
-          {filters.map((item) => (
-            <TabsTrigger key={item} value={item} className="rounded-full px-3 py-1 text-[13px]">
-              {item === "all" ? "全部" : item === "saved" ? "收藏" : tagLabel[item as WorkoutTag]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      {visible.length === 0 ? (
-        <Paint tone="pull" className="rounded-[22px] px-4 py-8 text-center">
-          <p className="t-headline relative">没有匹配的曲子</p>
-          <p className="t-caption relative mt-1 text-white/80">
-            {filter === "saved" ? "点曲目右边的心，会收进这里。" : "换个词，或者把筛选清掉。"}
-          </p>
-          {query || filter !== "all" ? (
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                setQuery("")
-                setFilter("all")
-              }}
-            >
-              清空筛选
-            </Button>
-          ) : null}
-        </Paint>
-      ) : (
-        <ul className="space-y-2">
-          {visible.map((track) => {
-            const playing = player.trackId === track.id && player.status === "playing"
-            const saved = player.favorites.includes(track.id)
-            return (
-              <li key={track.id} className="ios-row flex items-center gap-2 px-2.5 py-2.5">
-                <CoverArt seed={track.id} title={track.title} className="size-12 rounded-[12px]" />
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left"
-                  onClick={() =>
-                    void player.playTrack(track.id, {
-                      queue: visible.map((item) => item.id),
-                      loop: false,
-                    })
-                  }
-                >
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-medium">{track.title}</span>
-                    {playing ? <Equalizer /> : null}
-                    <span className="text-xs text-muted-foreground">{track.titleEn}</span>
-                  </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {tagLabel[track.tag]} · {track.bpm} BPM · {formatClock(track.durationSec)}
-                  </span>
-                </button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={saved ? `取消收藏${track.title}` : `收藏${track.title}`}
-                  aria-pressed={saved}
-                  onClick={() => player.toggleFavorite(track.id)}
-                >
-                  <Heart className={saved ? "fill-[#ff2d55] text-[#ff2d55]" : ""} />
-                </Button>
-                <Button
-                  size="icon"
-                  variant={playing ? "default" : "secondary"}
-                  aria-label={playing ? `暂停${track.title}` : `播放${track.title}`}
-                  onClick={() => {
-                    if (player.trackId === track.id) void player.toggle()
-                    else
-                      void player.playTrack(track.id, {
-                        queue: visible.map((item) => item.id),
-                        loop: false,
-                      })
-                  }}
-                >
-                  {playing ? <Pause /> : <Play />}
-                </Button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </div>
-  )
+  return <div className="music-page">
+    <MusicHeader title="资料库" subtitle="喜欢的节拍，随时回到你身边。" />
+    <section>
+      <MusicSectionHeading title="你的训练原声带" />
+      <div className="music-album-rail">{[tracks[0], tracks[2], tracks[7], tracks[8]].map((track) => <MusicTrackCard key={track.id} track={track} queue={tracks.map((item) => item.id)} />)}</div>
+    </section>
+    <section className="music-section">
+      <MusicSectionHeading title="歌曲" />
+      <label className="music-search-input"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="在资料库中搜索" aria-label="搜索资料库" /></label>
+      <div className="music-filter-bar" aria-label="筛选歌曲">{filters.map((item) => <button key={item} type="button" className="music-filter" aria-pressed={filter === item} onClick={() => setFilter(item)}>{item === "all" ? "全部歌曲" : item === "saved" ? "我的收藏" : tagLabel[item as WorkoutTag]}</button>)}</div>
+      <div className="music-library-actions"><button type="button" className="music-primary-action" disabled={!visible.length} onClick={() => playAll(false)}><Play size={15} fill="currentColor" />播放</button><button type="button" className="music-secondary-action" disabled={!visible.length} onClick={() => playAll(true)}><Shuffle size={16} />随机播放</button><span>{visible.length} 首歌曲</span></div>
+      {visible.length === 0 ? <div className="music-empty"><Music2 size={30} /><strong>{filter === "saved" && !query.trim() ? "收好每一首心动" : "还没有找到这首歌"}</strong><p>{filter === "saved" && !query.trim() ? "点按歌曲旁的爱心，把喜欢的节拍留在这里。" : "试试歌曲名称、英文名或 BPM。"}</p><button type="button" className="music-secondary-action" onClick={() => { setFilter("all"); setQuery("") }}>浏览全部歌曲</button></div> : <ol className="music-track-list">{visible.map((track, index) => {
+        const playing = player.trackId === track.id && player.status === "playing"
+        const saved = player.favorites.includes(track.id)
+        const play = () => { if (player.trackId === track.id) void player.toggle(); else void player.playTrack(track.id, { queue: visible.map((item) => item.id), loop: false }) }
+        return <li key={track.id} className="music-track-row"><span className="music-track-number">{String(index + 1).padStart(2, "0")}</span><CoverArt seed={track.id} title={track.title} className="music-track-row-cover" /><button type="button" className="music-track-row-main" onClick={play}><strong>{track.title}{playing ? <Equalizer /> : null}</strong><small>{track.titleEn} · {tagLabel[track.tag]} · {track.bpm} BPM</small></button><span className="music-track-row-duration">{formatClock(track.durationSec)}</span><button type="button" className="music-track-action" aria-label={saved ? `取消收藏${track.title}` : `收藏${track.title}`} aria-pressed={saved} onClick={() => player.toggleFavorite(track.id)}><Heart size={18} fill={saved ? "currentColor" : "none"} /></button><button type="button" className="music-track-action" aria-label={playing ? `暂停${track.title}` : `播放${track.title}`} onClick={play}>{playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}</button></li>
+      })}</ol>}
+    </section>
+    <footer className="music-page-footer"><span>PulseFit 原创合成节拍 · {tracks.length} 首</span><Link href="/sources">连接更多音乐 <ArrowUpRight size={13} /></Link></footer>
+  </div>
 }

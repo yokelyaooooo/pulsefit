@@ -1,0 +1,125 @@
+name: Release builds
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx eslint src next.config.ts capacitor.config.ts
+
+  web:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Package standalone server
+        shell: bash
+        run: |
+          mkdir -p release/web/.next
+          cp -a .next/standalone/. release/web/
+          cp -a .next/static release/web/.next/static
+          cp -a public release/web/public
+          cd release/web
+          zip -qr ../PulseFit-${GITHUB_REF_NAME}-web-server.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-server
+          path: release/PulseFit-*-web-server.zip
+          if-no-files-found: error
+
+  android:
+    needs: validate
+    runs-on: ubuntu-latest
+    env:
+      CAP_SERVER_URL: ${{ vars.CAP_SERVER_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npx cap sync android
+      - name: Install Android SDK components
+        shell: bash
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+      - name: Build installable preview APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+      - name: Collect APK
+        shell: bash
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/debug/app-debug.apk "release/PulseFit-${GITHUB_REF_NAME}-android-preview.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-preview
+          path: release/PulseFit-*-android-preview.apk
+          if-no-files-found: error
+
+  native-projects:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx cap sync ios
+      - name: Package native projects
+        shell: bash
+        run: |
+          mkdir -p release
+          zip -qr "release/PulseFit-${GITHUB_REF_NAME}-ios-xcode.zip" ios
+          zip -qr "release/PulseFit-${GITHUB_REF_NAME}-harmony-deveco.zip" harmony
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-projects
+          path: release/PulseFit-*.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [web, android, native-projects]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Create checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum PulseFit-* > SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: PulseFit ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release-assets/*

@@ -2,215 +2,92 @@
 
 import { useEffect, useSyncExternalStore } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Play, Search } from "lucide-react"
-import { CoverArt } from "@/components/cover-art"
+import { ArrowUpRight, ChevronRight, Dumbbell, Music2, Play, Radio } from "lucide-react"
 import { CoverWall } from "@/components/cover-wall"
-import { FocusTile } from "@/components/focus-tile"
-import { BpmMark, Equalizer, VinylDisc, Waveform } from "@/components/music-marks"
+import { MusicHeader, MusicSectionHeading, MusicTrackCard } from "@/components/music-ui"
 import { usePlayer } from "@/components/player-provider"
-import { Button } from "@/components/ui/button"
-import { Paint } from "@/components/artwork"
-import { getPlan, getTrack, plans, suggestedPlanId, tracks } from "@/lib/catalog"
+import { tracks } from "@/lib/catalog"
+import { getServerWallSnapshot, getWallSnapshot, hydrateWall, subscribeWall } from "@/lib/music/wall"
 import { getMusicSnapshot, getServerMusicSnapshot, hydrateMusic, subscribeMusic } from "@/lib/music/config"
-import type { MusicSettings } from "@/lib/music/types"
-import { getServerWallSnapshot, getWallSnapshot, hydrateWall, rankCovers, subscribeWall } from "@/lib/music/wall"
 import { hydratePersisted } from "@/lib/storage"
-import { focuses } from "@/lib/training/focus"
-import { formatClock } from "@/lib/audio/clock"
-import { planDuration } from "@/lib/workout"
-import { cn } from "@/lib/utils"
+import "@/components/music-home.css"
 
-const serverClock = {
-  planId: "hiit",
-  line: "把节拍锁在你的动作上。",
-}
-let clockSnapshot = serverClock
-const clockListeners = new Set<() => void>()
-
-function subscribeClock(listener: () => void) {
-  clockListeners.add(listener)
-  return () => clockListeners.delete(listener)
-}
-
-function getClockSnapshot() {
-  return clockSnapshot
-}
-
-function getServerClockSnapshot() {
-  return serverClock
-}
-
-function publishClock() {
-  const hour = new Date().getHours()
-  clockSnapshot = { planId: suggestedPlanId(hour), line: greeting(hour) }
-  clockListeners.forEach((listener) => listener())
-}
-
-function signedSources(settings: MusicSettings) {
-  const sources = new Set<string>()
-  if (settings.neteaseCookie || settings.neteaseName) sources.add("netease")
-  if (settings.qqCookie || settings.qqName) sources.add("qq")
-  if (settings.appleToken) sources.add("apple")
-  return sources
-}
-
-function greeting(hour: number) {
-  if (hour < 5) return "还醒着的话，先做一段恢复。"
-  if (hour < 11) return "早间适合把心率轻轻拉起来。"
-  if (hour < 14) return "午后短间歇，刚好出一身汗。"
-  if (hour < 18) return "下午的力量组，把节拍压稳。"
-  return "把今天最后一段燃完。"
-}
+const essentials = ["meltdown", "iron-law", "night-run", "tide", "flow", "embers"]
 
 export function HomeScreen() {
-  const router = useRouter()
   const player = usePlayer()
-  const clock = useSyncExternalStore(subscribeClock, getClockSnapshot, getServerClockSnapshot)
-  const music = useSyncExternalStore(subscribeMusic, getMusicSnapshot, getServerMusicSnapshot)
   const wall = useSyncExternalStore(subscribeWall, getWallSnapshot, getServerWallSnapshot)
-  const plan = getPlan(clock.planId) ?? plans[0]
+  const music = useSyncExternalStore(subscribeMusic, getMusicSnapshot, getServerMusicSnapshot)
+  const recommended = essentials.flatMap((id) => tracks.filter((track) => track.id === id))
 
   useEffect(() => {
-    queueMicrotask(() => {
-      publishClock()
-      hydratePersisted()
-      hydrateMusic()
-      hydrateWall()
-    })
+    hydratePersisted()
+    hydrateWall()
+    hydrateMusic()
   }, [])
 
-  const sources = signedSources(music)
-  const personal = sources.size === 0 ? [] : rankCovers(wall.imported.filter((cover) => sources.has(cover.source)))
-
-  const days = focuses.filter((focus) => focus.kind === "day")
-  const lifts = focuses.filter((focus) => focus.kind === "lift")
+  function playMix(ids: string[]) {
+    if (ids[0]) void player.playTrack(ids[0], { queue: ids, loop: false })
+  }
 
   return (
-    <div className="space-y-8">
-      <header className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="t-large flex items-center gap-2">
-            燃律
-            <Equalizer />
-          </h1>
-          <p className="t-sub mt-1">{clock.line}</p>
+    <div className="music-page">
+      <MusicHeader title="现在就听" subtitle="让音乐，跟上你的每一次心跳。" />
+
+      <section className="music-editorial-grid" aria-label="今日精选">
+        <div className="music-editorial-item">
+          <div className="music-eyebrow">为你精选</div>
+          <h2 className="music-editorial-title">好状态，听出来。</h2>
+          <p className="music-editorial-caption">你的今日训练原声带</p>
+          <button type="button" className="music-hero music-hero-move" onClick={() => playMix(tracks.filter((track) => track.tag === "hiit" || track.tag === "strength").map((track) => track.id))} aria-label="播放今日训练原声带">
+            <span className="music-hero-brand"><Music2 size={17} /> PULSEFIT MUSIC</span>
+            <span className="music-hero-big-type">MOVE<br /><span>WITH</span><br />THE BEAT.</span>
+            <span className="music-glass-disc" aria-hidden="true"><span /><i /></span>
+            <span className="music-hero-footer"><span>给每一次突破<br /><strong>一个心动的节拍。</strong></span><span className="music-glass-play"><Play size={20} fill="currentColor" /></span></span>
+          </button>
         </div>
-        <BpmMark bpm={plan.bpm} />
-      </header>
-
-      <Link href="/search" className="flex h-11 items-center gap-2 rounded-[12px] bg-[var(--fill)] px-3 text-[17px] text-[color:var(--label-secondary)]">
-        <Search className="size-4" />
-        搜索训练日、动作或歌曲
-      </Link>
-
-      <CoverWall personal={personal} />
-
-      <section>
-        <div className="mb-3 flex items-end justify-between">
-          <div>
-            <h2 className="t-2">歌单</h2>
-            <p className="t-caption mt-0.5 flex items-center gap-2 text-[color:var(--label-secondary)]">
-              燃律 PulseFit
-              <Waveform />
-            </p>
-          </div>
-          <Link href="/library" className="ios-link t-sub">
-            全部
-          </Link>
-        </div>
-        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
-          {tracks.map((track) => (
-            <button
-              key={track.id}
-              type="button"
-              className="w-[148px] shrink-0 text-left"
-              onClick={() => void player.playTrack(track.id, { queue: tracks.map((item) => item.id) })}
-            >
-              <span className="relative block h-[118px]">
-                <VinylDisc />
-                <CoverArt
-                  seed={track.id}
-                  title={track.title}
-                  className="absolute top-0 left-0 z-10 size-[118px] rounded-[16px] shadow-[0_8px_18px_rgba(28,28,30,0.12)]"
-                />
-              </span>
-              <div className="t-headline mt-2 truncate text-[15px]">{track.title}</div>
-              <div className="t-caption truncate text-[color:var(--label-secondary)]">燃律 PulseFit</div>
-              <BpmMark bpm={track.bpm} className="mt-1.5 bg-[#1c1c1e]" />
-            </button>
-          ))}
+        <div className="music-editorial-item">
+          <div className="music-eyebrow">给自己一点时间</div>
+          <h2 className="music-editorial-title">把世界调成慢速。</h2>
+          <p className="music-editorial-caption">呼吸、舒展，让身心回到平衡</p>
+          <button type="button" className="music-hero music-hero-unwind" onClick={() => playMix(["tide", "flow", "embers", "landing"])} aria-label="播放放松与恢复歌单">
+            {/* Existing licensed photo; attribution is in public/photos/ATTRIBUTION.md. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/photos/waves.jpg" alt="" className="music-hero-photo" />
+            <span className="music-hero-brand"><Music2 size={17} /> PULSEFIT CHILL</span>
+            <span className="music-unwind-type">慢下来，<br />也很好。</span>
+            <span className="music-unwind-english">TAKE A BREATH.</span>
+            <span className="music-hero-footer"><span>放松与恢复<br /><strong>在节拍之间，找回自己。</strong></span><span className="music-glass-play"><Play size={20} fill="currentColor" /></span></span>
+          </button>
         </div>
       </section>
 
-      <section>
-        <h2 className="t-2 mb-3">训练日</h2>
-        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
-          {days.map((focus) => (
-            <FocusTile key={focus.id} focus={focus} className="h-[148px] w-[168px] shrink-0" />
-          ))}
+      <section className="music-section">
+        <MusicSectionHeading title="为你的训练而选" subtitle="从热身到最后一组，总有合拍的节奏。" href="/library" />
+        <div className="music-album-rail">
+          {recommended.map((track) => <MusicTrackCard key={track.id} track={track} queue={recommended.map((item) => item.id)} />)}
         </div>
       </section>
 
-      <section>
-        <h2 className="t-2 mb-3">动作</h2>
-        <div className="grid grid-cols-3 gap-2.5">
-          {lifts.map((focus) => (
-            <FocusTile key={focus.id} focus={focus} className="h-[96px] p-3" />
-          ))}
+      <section className="music-section">
+        <MusicSectionHeading title="找到你的节奏" href="/search" />
+        <div className="music-station-grid">
+          <button type="button" className="music-station music-station-energy" onClick={() => playMix(["burst", "meltdown", "ramp", "core"])}>
+            <Radio size={26} /><span><strong>全力以赴</strong><small>高能节拍 · 132–174 BPM</small></span><Play size={18} fill="currentColor" />
+          </button>
+          <button type="button" className="music-station music-station-focus" onClick={() => playMix(["barbell", "iron-law", "core"])}>
+            <Music2 size={26} /><span><strong>专注每一组</strong><small>力量时刻 · 102–132 BPM</small></span><Play size={18} fill="currentColor" />
+          </button>
+          <button type="button" className="music-station music-station-calm" onClick={() => playMix(["tide", "embers", "landing"])}>
+            <Radio size={26} /><span><strong>呼吸之间</strong><small>舒缓慢拍 · 60–72 BPM</small></span><Play size={18} fill="currentColor" />
+          </button>
         </div>
       </section>
 
-      <section>
-        <h2 className="t-2 mb-3">间歇</h2>
-        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
-          {plans.map((item) => {
-            const selected = item.id === plan.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={cn(
-                  "w-[168px] shrink-0 overflow-hidden rounded-[18px] text-left shadow-[0_12px_24px_rgba(28,28,30,0.12)]",
-                  selected ? "ring-2 ring-[#1c1c1e]" : ""
-                )}
-                onClick={() => {
-                  clockSnapshot = { ...clockSnapshot, planId: item.id }
-                  clockListeners.forEach((listener) => listener())
-                }}
-              >
-                <Paint tone={item.tag} className="relative h-[148px] p-3.5">
-                  <BpmMark bpm={item.bpm} className="absolute top-3 right-3" />
-                  <span className="t-caption relative text-white/85">{formatClock(planDuration(item))}</span>
-                  <span className="t-headline relative mt-6 block">{item.name}</span>
-                  <span className="t-caption relative text-white/80">{item.bpm} BPM</span>
-                </Paint>
-              </button>
-            )
-          })}
-        </div>
-        <div className="ios-card mt-3 flex items-center gap-3 p-3">
-          <CoverArt
-            seed={getTrack(plan.trackId)?.id ?? plan.id}
-            title={plan.name}
-            className="size-16 shrink-0 rounded-[14px]"
-          />
-          <div className="min-w-0 flex-1">
-            <div className="t-headline truncate">{plan.name}</div>
-            <div className="t-caption mt-0.5 text-[color:var(--label-secondary)]">{plan.blurb}</div>
-          </div>
-          <Button
-            className="shrink-0"
-            onClick={() => {
-              void player.startWorkout(plan.id)
-              router.push("/session")
-            }}
-          >
-            <Play className="fill-current" />
-            开始
-          </Button>
-        </div>
-      </section>
+      <CoverWall personal={wall.imported.filter((cover) => cover.source === "netease" ? Boolean(music.neteaseCookie || music.neteaseName) : cover.source === "qq" ? Boolean(music.qqCookie || music.qqName) : cover.source === "apple" ? Boolean(music.appleToken) : true)} />
+
+      <Link href="/train" className="music-training-link"><span className="music-training-icon"><Dumbbell size={23} /></span><span><strong>音乐就位，开始今天的训练</strong><small>记录每一组，见证每一点进步。</small></span><ChevronRight size={19} /></Link>
+      <footer className="music-page-footer"><span>PulseFit 原创合成节拍 · 为运动而生</span><Link href="/sources">连接你的音乐服务 <ArrowUpRight size={13} /></Link></footer>
     </div>
   )
 }

@@ -5,6 +5,7 @@ interface AppleInstance {
   authorize: () => Promise<string>
   unauthorize: () => Promise<void>
   isAuthorized: boolean
+  musicUserToken: string
   storefrontId?: string
   setQueue: (options: { song?: string; songs?: string[] }) => Promise<void>
   play: () => Promise<void>
@@ -51,7 +52,9 @@ export function loadMusicKit() {
     script.src = "https://js-cdn.music.apple.com/musickit/v3/musickit.js"
     script.async = true
     script.dataset.musickit = "true"
-    script.addEventListener("error", () => reject(new Error("MusicKit 脚本没有加载。需要能访问 Apple 的 CDN。")))
+    const timer = window.setTimeout(() => { script.remove(); document.removeEventListener("musickitloaded", done); loading = null; reject(new Error("Apple Music 加载超时，请重试。")) }, 15_000)
+    document.addEventListener("musickitloaded", () => window.clearTimeout(timer), { once: true })
+    script.addEventListener("error", () => { window.clearTimeout(timer); script.remove(); document.removeEventListener("musickitloaded", done); loading = null; reject(new Error("Apple Music 暂时无法连接，请重试。")) })
     document.head.appendChild(script)
   })
   return loading
@@ -76,6 +79,25 @@ export async function appleAuthorize(token: string) {
   const music = await configureApple(token)
   await music.authorize()
   return music.isAuthorized
+}
+
+export async function appleAcceptUserToken(developerToken: string, userToken: string) {
+  const music = await configureApple(developerToken)
+  music.musicUserToken = userToken
+  try { await music.api.music("/v1/me/storefront") }
+  catch (error) { await music.unauthorize(); throw error }
+  return music.isAuthorized
+}
+
+export async function appleDisconnect() {
+  if (window.MusicKit && configuredToken) await window.MusicKit.getInstance().unauthorize()
+}
+
+export async function applePairRequest(body: Record<string, string>, signal?: AbortSignal) {
+  const response = await fetch("/api/apple-pair", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000) })
+  const result = await response.json()
+  if (!response.ok) throw new Error(result.error || "Apple Music 连接失败。")
+  return result as { key?: string; pollKey?: string; code: number | string; pairingCode?: string; image?: string; url?: string; userToken?: string; developerToken?: string; message?: string }
 }
 
 export async function appleSearch(token: string, term: string): Promise<CatalogItem[]> {

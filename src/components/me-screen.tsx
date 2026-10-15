@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Clock3, Heart, TimerReset } from "lucide-react"
 import { BrandMark } from "@/components/brand-mark"
 import { Paint } from "@/components/artwork"
@@ -27,10 +28,10 @@ export function MeScreen() {
   const finished = player.sessions.filter((session) => session.finished).length
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <header>
-        <h1 className="t-large">我的</h1>
-        <p className="t-sub mt-1">训练记录留在这台设备上。音量、收藏和历史都写在本地。</p>
+        <h1 className="t-large">我的空间</h1>
+        <p className="t-sub mt-1">收藏你的节拍，记住每一次进步。数据保存在当前设备。</p>
       </header>
 
       <div className="grid grid-cols-3 gap-2">
@@ -69,7 +70,7 @@ export function MeScreen() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="t-2">训练记录</h2>
+          <h2 className="t-2">间歇训练记录</h2>
           {player.sessions.length > 0 ? (
             <Button variant="ghost" size="sm" onClick={() => setConfirm(true)}>
               清空
@@ -79,7 +80,7 @@ export function MeScreen() {
         {player.sessions.length === 0 ? (
           <Paint tone="recover" className="rounded-[22px] px-4 py-8">
             <p className="t-headline relative">还没有训练记录</p>
-            <p className="t-caption relative mt-1 text-white/80">从首页开始一轮间歇，结束后会记在这里。</p>
+            <Link href="/session" className="t-caption relative mt-2 inline-block text-white/90 underline underline-offset-4">开始一轮间歇训练</Link>
           </Paint>
         ) : (
           <ul className="space-y-2">
@@ -106,8 +107,8 @@ export function MeScreen() {
         <BrandMark className="size-14" />
         <div>
         <p className="font-medium text-foreground">燃律 PulseFit</p>
-        <p className="mt-1">应用 ID：com.pulsefit.app</p>
-        <p>同一套播放器给 iOS、Android 和鸿蒙。网页版现在就能用，原生壳用这个 ID 打包。</p>
+        <p className="mt-1">音乐与训练，同频发生。</p>
+        <Link href="/train/history" className="ios-link mt-1 inline-block">查看力量训练记录 →</Link>
         </div>
       </section>
 
@@ -120,8 +121,8 @@ export function MeScreen() {
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>清空训练记录？</DialogTitle>
-            <DialogDescription>收藏和音量会留下，只删历史。</DialogDescription>
+            <DialogTitle>清空间歇训练记录？</DialogTitle>
+            <DialogDescription>仅删除间歇历史。力量训练、收藏和音量设置会保留。</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button

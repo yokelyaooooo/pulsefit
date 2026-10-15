@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import { lyricIndexAt, type LyricLine } from "@/lib/music/lrc"
 import { cn } from "@/lib/utils"
+import styles from "./lyrics-view.module.css"
 
 export function LyricsView({
   lines,
@@ -39,6 +40,7 @@ export function LyricsView({
       ref={listRef}
       className={cn(
         "space-y-5 overflow-y-auto py-16 text-left [mask-image:linear-gradient(180deg,transparent,#000_12%,#000_88%,transparent)]",
+        styles.scroll,
         className
       )}
       aria-label="歌词"

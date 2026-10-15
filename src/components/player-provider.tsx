@@ -17,10 +17,12 @@ import { parseLrc, type LyricLine } from "@/lib/music/lrc"
 import { localPlayable, recallCatalog, recallPlayable, rememberPlayable } from "@/lib/music/local"
 import { resolvePlayback } from "@/lib/music/resolve"
 import type { MusicSource, Playable } from "@/lib/music/types"
-import { getMusicSnapshot } from "@/lib/music/config"
+import { getMusicSnapshot, hydrateMusic } from "@/lib/music/config"
 import { notePlay } from "@/lib/music/wall"
+import { nextQueueId, shuffleQueue, type RepeatMode } from "@/lib/music/queue"
 import {
   getPersistedSnapshot,
+  hydratePersisted,
   getServerPersistedSnapshot,
   subscribePersisted,
   updatePersisted,
@@ -44,6 +46,7 @@ interface PlayOptions {
   energy?: number
   queue?: string[]
   loop?: boolean
+  shuffle?: boolean
 }
 
 interface PlayerContextValue {
@@ -62,6 +65,10 @@ interface PlayerContextValue {
   error: string | null
   audioLocked: boolean
   loop: boolean
+  repeatMode: RepeatMode
+  shuffle: boolean
+  cycleRepeat: () => void
+  toggleShuffle: () => void
   now: NowMeta | null
   lyrics: LyricLine[]
   notice: string | null
@@ -93,6 +100,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const loopRef = useRef(false)
   const trackIdRef = useRef<string | null>(null)
   const queueRef = useRef<string[]>(tracks.map((track) => track.id))
+  const orderedQueueRef = useRef<string[]>(tracks.map((track) => track.id))
+  const shuffleRef = useRef(false)
+  const repeatRef = useRef<RepeatMode>("off")
   const workoutRef = useRef<WorkoutClock | null>(null)
   const finishingRef = useRef(false)
   const clockGen = useRef(0)
@@ -122,9 +132,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [audioLocked, setAudioLocked] = useState(false)
   const [loop, setLoop] = useState(false)
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("off")
+  const [shuffle, setShuffle] = useState(false)
   const [now, setNow] = useState<NowMeta | null>(null)
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [notice, setNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    hydratePersisted()
+    hydrateMusic()
+  }, [])
 
   useEffect(() => {
     trackIdRef.current = trackId
@@ -169,6 +186,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setWorkout(null)
       setLoop(false)
       loopRef.current = false
+      repeatRef.current = "off"
+      setRepeatMode("off")
       engineRef.current?.pause()
       setStatus("paused")
     },
@@ -205,10 +224,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         return false
       }
     }
-    const nextQueue = options?.queue?.length ? options.queue : queueRef.current
+    if (options?.shuffle !== undefined) {
+      shuffleRef.current = options.shuffle
+      setShuffle(options.shuffle)
+    }
+    let nextQueue = queueRef.current
+    if (options?.queue?.length) {
+      orderedQueueRef.current = [...options.queue]
+      nextQueue = shuffleRef.current ? shuffleQueue(options.queue, id) : options.queue
+    }
     if (options?.loop !== undefined) {
       loopRef.current = options.loop
       setLoop(options.loop)
+      repeatRef.current = options.loop ? "all" : "off"
+      setRepeatMode(repeatRef.current)
     }
     setQueue(nextQueue)
     queueRef.current = nextQueue
@@ -327,56 +356,43 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [playTrack]
   )
 
-  const next = useCallback(async () => {
+  const advance = useCallback(async (automatic: boolean) => {
     const currentId = trackIdRef.current
-    const ids = queueRef.current
-    if (!currentId || ids.length === 0) return
-    const index = ids.indexOf(currentId)
-    const following = ids[index + 1]
-    if (following) {
-      await playTrack(following)
-      return
-    }
-    if (loopRef.current) {
-      if (modeRef.current === "audio" && audioRef.current) {
-        audioRef.current.currentTime = 0
-        try {
-          await audioRef.current.play()
-          setStatus("playing")
-          setPositionSec(0)
-        } catch {
-          setAudioLocked(true)
-          setError("浏览器拦住了这首外部音频。再点一次播放。")
-        }
-        return
-      }
-      if (modeRef.current === "apple") {
-        await appleSeek(0)
-        await appleResume()
-        setStatus("playing")
-        setPositionSec(0)
-        return
-      }
-      const engine = engineRef.current
-      engine?.seek(0)
-      try {
-        await engine?.resume()
-        engine?.play()
-        setStatus("playing")
-        setPositionSec(0)
-      } catch {
-        setAudioLocked(true)
-        setError("浏览器拦住了声音。再点一次播放。")
-      }
+    if (!currentId) return
+    const target = nextQueueId(queueRef.current, currentId, repeatRef.current, automatic)
+    if (target) {
+      await playTrack(target)
       return
     }
     engineRef.current?.pause()
+    audioRef.current?.pause()
+    if (modeRef.current === "apple") void applePause()
     setStatus("paused")
   }, [playTrack])
 
+  const next = useCallback(() => advance(false), [advance])
+
+  const cycleRepeat = useCallback(() => {
+    const modes: RepeatMode[] = ["off", "all", "one"]
+    const mode = modes[(modes.indexOf(repeatRef.current) + 1) % modes.length]
+    repeatRef.current = mode
+    loopRef.current = mode !== "off"
+    setLoop(mode !== "off")
+    setRepeatMode(mode)
+  }, [])
+
+  const toggleShuffle = useCallback(() => {
+    const enabled = !shuffleRef.current
+    shuffleRef.current = enabled
+    setShuffle(enabled)
+    const ids = enabled ? shuffleQueue(orderedQueueRef.current, trackIdRef.current ?? undefined) : [...orderedQueueRef.current]
+    queueRef.current = ids
+    setQueue(ids)
+  }, [])
+
   useEffect(() => {
-    nextRef.current = next
-  }, [next])
+    nextRef.current = () => advance(true)
+  }, [advance])
 
   useEffect(() => {
     const engine = new PulseEngine()
@@ -583,7 +599,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const target = event.target
       if (
         target instanceof HTMLElement &&
-        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+        (target.closest("input, textarea, select, button, a, [role=slider], [contenteditable=true]"))
       ) {
         return
       }
@@ -758,6 +774,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       error,
       audioLocked,
       loop,
+      repeatMode,
+      shuffle,
+      cycleRepeat,
+      toggleShuffle,
       now,
       lyrics,
       notice,
@@ -795,6 +815,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       error,
       audioLocked,
       loop,
+      repeatMode,
+      shuffle,
+      cycleRepeat,
+      toggleShuffle,
       now,
       lyrics,
       notice,
@@ -823,6 +847,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
 export function usePlayer() {
   const context = useContext(PlayerContext)
+  // Each streamed page must hydrate with the server snapshot before reading
+  // browser storage; its parent provider may already have finished hydrating.
+  const persisted = useSyncExternalStore(subscribePersisted, getPersistedSnapshot, getServerPersistedSnapshot)
   if (!context) throw new Error("usePlayer must be used within PlayerProvider")
-  return context
+  return { ...context, favorites: persisted.favorites, sessions: persisted.sessions, volume: persisted.volume }
 }

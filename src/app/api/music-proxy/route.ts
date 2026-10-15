@@ -1,5 +1,6 @@
 import { isAllowedMusicBase } from "@/lib/music/allow"
 import { NextResponse } from "next/server"
+import { isSameOriginRequest } from "@/lib/music/auth-data"
 
 export const dynamic = "force-dynamic"
 
@@ -13,6 +14,7 @@ interface ProxyBody {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return NextResponse.json({ error: "请求来源不匹配。" }, { status: 403 })
   let payload: ProxyBody
   try {
     payload = (await request.json()) as ProxyBody
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
-  if (typeof payload.path !== "string" || !payload.path.startsWith("/") || payload.path.includes("://")) {
+  if (typeof payload.path !== "string" || !payload.path.startsWith("/") || payload.path.startsWith("//") || payload.path.includes("://")) {
     return NextResponse.json({ error: "接口路径不合法。" }, { status: 400 })
   }
   const method = payload.method === "POST" ? "POST" : "GET"
@@ -47,6 +49,8 @@ export async function POST(request: Request) {
       headers,
       body: method === "POST" ? JSON.stringify(payload.body ?? {}) : undefined,
       redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     })
   } catch {
     return NextResponse.json({ error: "连不上这个音乐源。确认它正在本机运行。" }, { status: 502 })
@@ -59,7 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "音乐源响应太大。" }, { status: 502 })
   }
   try {
-    return NextResponse.json({ data: JSON.parse(text) }, { status: upstream.ok ? 200 : 502 })
+    return NextResponse.json({ data: JSON.parse(text) }, { status: upstream.ok ? 200 : 502, headers: { "Cache-Control": "no-store, private" } })
   } catch {
     return NextResponse.json({ error: "音乐源没有返回 JSON。" }, { status: 502 })
   }

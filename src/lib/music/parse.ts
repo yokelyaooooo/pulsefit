@@ -119,7 +119,8 @@ function qrMessage(code: number) {
 }
 
 export function readNeteaseAccount(payload: unknown) {
-  const root = record(payload)
+  const outer = record(payload)
+  const root = record(outer?.data) ?? outer
   const profile = record(root?.profile)
   const account = record(root?.account)
   const uid = profile?.userId ?? account?.id
@@ -175,7 +176,8 @@ export function readQqPlaylists(payload: unknown): PlaylistItem[] {
   const found: PlaylistItem[] = []
   const seen = new Set<string>()
   walk(payload, 0, (row) => {
-    const nativeId = text(row.dissid) || text(row.tid) || (row.dirid == null ? "" : String(row.dirid))
+    const rawId = row.dissid ?? row.tid ?? row.dirid
+    const nativeId = typeof rawId === "string" || typeof rawId === "number" ? String(rawId) : ""
     const name = text(row.diss_name) || text(row.dissname) || text(row.title) || text(row.name)
     if (!nativeId || !name || seen.has(nativeId)) return
     if (!row.dissid && !row.diss_name && !row.dissname && !row.tid) return
@@ -219,8 +221,12 @@ export function readQqLyric(payload: unknown) {
 }
 
 export function qqUinFromCookie(cookie: string) {
-  const match = cookie.match(/(?:^|[;\s])(?:uin|p_uin|wxuin)=o?(\d+)/i)
-  return match?.[1] ?? ""
+  const values = Object.fromEntries(cookie.split(";").map((part) => {
+    const split = part.indexOf("=")
+    return split < 0 ? ["", ""] : [part.slice(0, split).trim().toLowerCase(), part.slice(split + 1).trim()]
+  }))
+  const value = values.login_type === "2" ? values.wxuin || values.uin : values.uin || values.p_uin || values.wxuin
+  return value?.match(/^o?(\d+)$/i)?.[1] ?? ""
 }
 
 export function readAppleSongs(payload: unknown): CatalogItem[] {

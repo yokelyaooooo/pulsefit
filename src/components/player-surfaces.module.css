@@ -1,0 +1,137 @@
+.mini {
+  position: relative;
+  width: 100%;
+  margin-bottom: 8px;
+  overflow: hidden;
+  pointer-events: auto;
+  color: #272337;
+  border: 1px solid rgb(255 255 255 / 88%);
+  border-radius: 22px;
+  background: linear-gradient(120deg, rgb(255 255 255 / 84%), rgb(241 235 255 / 76%) 63%, rgb(234 244 255 / 85%));
+  box-shadow: inset 0 1px 1px #fff, 0 5px 25px rgb(76 58 115 / 8%);
+  -webkit-backdrop-filter: blur(32px) saturate(1.8);
+  backdrop-filter: blur(32px) saturate(1.8);
+}
+
+.miniRow { display: flex; align-items: center; gap: 3px; padding: 7px 10px 8px 8px; }
+.miniOpen { display: flex; flex: 1; min-width: 0; align-items: center; gap: 11px; padding: 0; text-align: left; border-radius: 13px; }
+.miniCover { width: 43px; height: 43px; flex-shrink: 0; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 7px rgb(32 28 56 / 10%); }
+.miniCopy { min-width: 0; }
+.miniTitle { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 650; letter-spacing: -.2px; }
+.miniArtist { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #827b92; font-size: 11px; }
+.miniWave { width: 18px; height: 18px; margin-left: auto; margin-right: 12px; flex-shrink: 0; color: #8c6ddc; }
+.miniControl { display: grid; width: 40px; height: 43px; flex-shrink: 0; place-items: center; border-radius: 50%; transition: background .18s, transform .18s; }
+.miniControl:hover { background: rgb(139 111 212 / 9%); }
+.miniControl:active { transform: scale(.9); }
+.miniControl:disabled { opacity: .3; }
+.miniProgress { position: absolute; bottom: 0; left: 21px; right: 21px; height: 2px; background: rgb(121 97 168 / 6%); }
+.miniProgress span { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #a888ef, #e7a0d6, #93b7f2); transition: width .2s linear; }
+
+.player { position: relative; display: flex; height: 100%; min-height: 0; width: 100%; overflow: hidden auto; isolation: isolate; color: #fff; background: #504664; }
+.ambient { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: linear-gradient(145deg, #8b75a8, #595574 60%, #39394e); }
+.ambient img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.45); filter: blur(70px) saturate(.8); opacity: .6; }
+.ambient::after { content: ""; position: absolute; inset: 0; background: linear-gradient(165deg, rgb(124 108 160 / 25%), rgb(34 29 57 / 30%) 45%, rgb(30 25 48 / 75%)); }
+.playerContent { display: flex; flex-direction: column; width: min(100%, 480px); min-height: 540px; height: 100%; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 30px max(19px, env(safe-area-inset-bottom)); }
+.playerHeader { display: flex; height: 42px; flex-shrink: 0; align-items: center; justify-content: space-between; color: rgb(255 255 255 / 70%); }
+.playerHeader > span:not(.headerSpacer) { font-size: 12px; font-weight: 550; letter-spacing: 2px; }
+.headerSpacer { width: 38px; }
+.roundButton { display: grid; width: 38px; height: 38px; flex-shrink: 0; place-items: center; border-radius: 50%; transition: background .2s; }
+.roundButton:hover { background: rgb(255 255 255 / 12%); }
+.roundButton:disabled { opacity: .3; }
+.mainArea { position: relative; min-height: 135px; flex: 1; margin: 10px 0 24px; }
+.artStage { display: flex; height: 100%; min-height: 0; align-items: center; justify-content: center; container-type: size; }
+.coverFrame { width: min(100cqw, 100cqh); max-width: 360px; aspect-ratio: 1; border-radius: 15px; box-shadow: 0 22px 40px rgb(17 12 36 / 25%), 0 0 0 1px rgb(255 255 255 / 15%); transition: transform .15s; }
+.fullCover { display: block; height: 100%; width: 100%; border-radius: 15px; object-fit: cover; }
+.metadata { display: flex; min-height: 56px; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 14px; }
+.trackName { min-width: 0; }
+.trackName h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 23px; font-weight: 700; line-height: 1.35; letter-spacing: -.55px; }
+.trackName p { margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgb(255 255 255 / 65%); font-size: 18px; }
+.favorite { color: rgb(255 255 255 / 88%); background: rgb(255 255 255 / 10%); }
+.isFavorite { color: #f4c7f0; background: rgb(232 192 249 / 17%); }
+.timeline { flex-shrink: 0; margin-top: 23px; }
+.slider { min-height: 16px; }
+.slider [data-slot="slider-track"] { height: 5px; background: rgb(255 255 255 / 21%); }
+.slider [data-slot="slider-range"] { background: rgb(255 255 255 / 84%); }
+.slider [data-slot="slider-thumb"] { width: 7px; height: 7px; border: 0; background: #fff; box-shadow: none; }
+.slider [data-slot="slider-thumb"]:focus-visible { outline: 3px solid rgb(232 198 255 / 65%); outline-offset: 4px; }
+.timestamps { display: flex; justify-content: space-between; color: rgb(255 255 255 / 50%); font-size: 11px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.transport { display: flex; flex-shrink: 0; align-items: center; justify-content: space-around; margin: 10px 7px 6px; }
+.transport button { display: grid; width: 60px; height: 62px; place-items: center; border-radius: 50%; transition: background .2s, transform .2s; }
+.transport .playButton { width: 72px; height: 72px; }
+.transport .modeButton { width: 34px; height: 34px; border-radius: 10px; color: rgb(255 255 255 / 50%); }
+.transport .modeActive { color: #fff; background: rgb(255 255 255 / 17%); }
+.transport button:hover { background: rgb(255 255 255 / 8%); }
+.transport button:active { transform: scale(.9); }
+.transport button:disabled { opacity: .28; }
+.volume { display: flex; flex-shrink: 0; align-items: center; gap: 12px; margin-top: 9px; color: rgb(255 255 255 / 60%); }
+.volume button { display: grid; width: 28px; height: 34px; flex-shrink: 0; place-items: center; border-radius: 50%; }
+.volume > svg { flex-shrink: 0; }
+.volume .slider [data-slot="slider-range"] { background: rgb(255 255 255 / 65%); }
+.volume .slider [data-slot="slider-thumb"] { opacity: 0; }
+.volume .slider:hover [data-slot="slider-thumb"], .volume .slider:focus-within [data-slot="slider-thumb"] { opacity: 1; }
+.playerFooter { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; margin-top: 14px; padding: 0 8px; }
+.footerButton { display: flex; min-width: 64px; height: 52px; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 5px 10px; border-radius: 13px; color: rgb(255 255 255 / 70%); transition: background .2s, color .2s; }
+.footerButton:hover, .footerActive { color: #fff; background: rgb(255 255 255 / 13%); }
+.footerButton > span { display: flex; align-items: center; gap: 4px; font-size: 9px; font-variant-numeric: tabular-nums; }
+.footerButton i { width: 4px; height: 4px; border-radius: 50%; background: #e7c4ff; }
+.sourceLabel { display: flex; flex-direction: column; align-items: center; gap: 6px; color: rgb(255 255 255 / 50%); font-size: 9px; }
+.playerError { flex-shrink: 0; margin-top: 7px; color: #ffd9e8; font-size: 11px; line-height: 1.5; }
+.detailPanel { display: flex; height: 100%; min-height: 0; flex-direction: column; }
+.compactTrack { display: flex; flex-shrink: 0; align-items: center; gap: 12px; width: 100%; padding: 5px 0 12px; text-align: left; }
+.compactCover { width: 44px; height: 44px; flex-shrink: 0; border-radius: 8px; }
+.compactTrack > span, .queueTrack > span:not(.queueTime) { display: block; min-width: 0; flex: 1; }
+.compactTrack strong, .queueTrack strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
+.compactTrack small, .queueTrack small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; color: rgb(255 255 255 / 55%); font-size: 12px; }
+.lyrics { min-height: 0; flex: 1; }
+.queueScroll { min-height: 0; flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 20%) transparent; }
+.queueHeading { display: flex; align-items: baseline; justify-content: space-between; padding: 11px 0; }
+.queueHeading h3 { font-size: 19px; font-weight: 650; }
+.queueHeading > span { color: rgb(255 255 255 / 45%); font-size: 11px; }
+.queueList { margin: 0; padding: 0; list-style: none; }
+.queueTrack { display: flex; width: 100%; align-items: center; gap: 11px; padding: 9px 8px; border-radius: 11px; text-align: left; }
+.queueTrack:hover, .queueCurrent { background: rgb(255 255 255 / 11%); }
+.queueCover { width: 40px; height: 40px; flex-shrink: 0; border-radius: 7px; }
+.queueTrack > svg { flex-shrink: 0; color: #e4c6ff; }
+.queueTime { color: rgb(255 255 255 / 45%); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tuning { min-height: 0; overflow-y: auto; }
+.tuningIntro { padding: 12px 0 8px; }
+.tuningIntro > svg { color: #e0c7ff; }
+.tuningIntro h3 { margin-top: 12px; font-size: 22px; font-weight: 650; }
+.tuningIntro p, .tuningHint { margin-top: 8px; color: rgb(255 255 255 / 60%); font-size: 12px; line-height: 1.7; }
+.tuningLabel { display: block; margin-top: 25px; }
+.tuningLabel > span { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+.tuningLabel strong { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.tuningLabel small { font-size: 10px; font-weight: 500; color: rgb(255 255 255 / 55%); }
+.mini button:focus-visible, .player button:focus-visible { outline: 2px solid #baa1f1; outline-offset: 3px; }
+
+@media (min-width: 768px) {
+  .playerContent { padding-top: 15px; padding-bottom: 20px; }
+  .mainArea { margin-top: 20px; margin-bottom: 28px; }
+}
+
+@media (max-height: 700px) {
+  .playerContent { padding-top: 6px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .mainArea { margin: 4px 0 13px; }
+  .playerHeader { height: 35px; }
+  .metadata { min-height: 46px; }
+  .trackName h2 { font-size: 20px; }
+  .trackName p { font-size: 15px; }
+  .timeline { margin-top: 12px; }
+  .transport { margin-top: 4px; margin-bottom: 0; }
+  .transport button, .transport .playButton { height: 57px; }
+  .volume { margin-top: 0; }
+  .playerFooter { margin-top: 5px; }
+}
+
+@media (max-width: 360px) {
+  .playerContent { padding-right: 23px; padding-left: 23px; }
+  .miniRow { gap: 0; padding-right: 6px; }
+  .miniOpen { gap: 8px; }
+  .miniControl { width: 34px; }
+  .miniWave { display: none; }
+  .miniTitle { font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mini *, .player * { transition: none !important; }
+}

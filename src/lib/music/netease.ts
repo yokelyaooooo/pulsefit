@@ -17,29 +17,33 @@ function query(settings: MusicSettings, extra: Record<string, string> = {}) {
   return params
 }
 
-export async function neteaseQrStart(settings: MusicSettings) {
-  const keyPayload = await musicRequest(settings.neteaseBase, "/login/qr/key", { query: query(settings) })
+export async function neteaseQrStart(settings: MusicSettings, signal?: AbortSignal) {
+  const keyPayload = await musicRequest(settings.neteaseBase, "/login/qr/key", { query: { timestamp: String(Date.now()) }, signal })
   const key = readQrKey(keyPayload)
   if (!key) throw new Error("网易云没有返回二维码 key。确认 NeteaseCloudMusicApi 已在这个地址运行。")
   const imagePayload = await musicRequest(settings.neteaseBase, "/login/qr/create", {
-    query: query(settings, { key, qrimg: "true" }),
+    query: { key, qrimg: "true", timestamp: String(Date.now()) }, signal,
   })
   const image = readQrImage(imagePayload)
   if (!image.image && !image.url) throw new Error("网易云没有返回二维码图片。")
   return { key, ...image }
 }
 
-export async function neteaseQrPoll(settings: MusicSettings, key: string) {
+export async function neteaseQrPoll(settings: MusicSettings, key: string, signal?: AbortSignal) {
   const payload = await musicRequest(settings.neteaseBase, "/login/qr/check", {
-    query: query(settings, { key }),
+    query: { key, timestamp: String(Date.now()) }, signal,
   })
   return readQrCheck(payload)
 }
 
-export async function neteaseAccount(settings: MusicSettings) {
-  const payload = await musicRequest(settings.neteaseBase, "/user/account", { query: query(settings) })
-  const account = readNeteaseAccount(payload)
-  if (!account.uid) throw new Error("网易云 cookie 还不能读到账号。重新扫码登录。")
+export async function neteaseAccount(settings: MusicSettings, signal?: AbortSignal) {
+  const status = await musicRequest(settings.neteaseBase, "/login/status", { query: query(settings), signal }).catch((error) => {
+    if (signal?.aborted) throw error
+    return null
+  })
+  let account = readNeteaseAccount(status)
+  if (!account.uid) account = readNeteaseAccount(await musicRequest(settings.neteaseBase, "/user/account", { query: query(settings), signal }))
+  if (!account.uid) throw new Error("暂时无法确认账号，请稍后重试或重新扫码。")
   return account
 }
 

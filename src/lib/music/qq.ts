@@ -1,13 +1,13 @@
 import { musicRequest } from "@/lib/music/http"
 import { qqUinFromCookie, readQqLyric, readQqPlaylists, readQqSongs, readQqUrls } from "@/lib/music/parse"
 import type { MusicSettings } from "@/lib/music/types"
+import { cookieHeader, parseCookies } from "@/lib/music/auth-data"
 
-async function bindCookie(settings: MusicSettings) {
-  if (!settings.qqCookie.trim()) throw new Error("先粘贴你自己的 QQ 音乐 cookie。")
-  await musicRequest(settings.qqBase, "/user/setCookie", {
-    method: "POST",
-    body: { data: settings.qqCookie.trim() },
-  })
+function accountCookie(settings: MusicSettings) {
+  const cookies = parseCookies(settings.qqCookie)
+  const uin = qqUinFromCookie(settings.qqCookie) || settings.qqUin
+  if (!uin || !(cookies.qm_keyst || cookies.qqmusic_key)) throw new Error("音乐授权不完整，请扫码登录，或导入包含音乐授权的 Cookie。")
+  return cookieHeader({ ...cookies, uin })
 }
 
 export function describeQqCookie(cookie: string) {
@@ -16,39 +16,50 @@ export function describeQqCookie(cookie: string) {
 }
 
 export async function qqConnect(settings: MusicSettings) {
-  await bindCookie(settings)
-  const identity = describeQqCookie(settings.qqCookie)
-  if (!identity.uin && !settings.qqUin) {
-    throw new Error("cookie 里没有 uin。请粘贴包含 uin 的整段 cookie，或另外填写 QQ 号。")
-  }
-  return { uin: identity.uin || settings.qqUin, name: identity.name || `QQ ${settings.qqUin}` }
+  const cookie = accountCookie(settings)
+  const payload = await musicRequest(settings.qqBase, "/user/refresh", { cookie }) as { data?: { musickey?: string; nickname?: string } }
+  if (!payload.data?.musickey) throw new Error("登录校验失败，请重新扫码授权。")
+  const uin = qqUinFromCookie(cookie)
+  return { uin, name: payload.data.nickname || `QQ ${uin}`, cookie: cookieHeader({ ...parseCookies(cookie), qm_keyst: payload.data.musickey, qqmusic_key: payload.data.musickey }) }
+}
+
+export async function qqQrStart(signal?: AbortSignal) {
+  return await musicRequest("/api/qq", "/login/qr/start", { signal }) as { key: string; image: string; url: null }
+}
+
+export async function qqQrPoll(key: string, signal?: AbortSignal) {
+  return await musicRequest("/api/qq", "/login/qr/check", { query: { key }, signal }) as { code: number; cookie?: string; uin?: string; name?: string; message: string }
+}
+
+export async function qqQrCancel(key: string) {
+  await musicRequest("/api/qq", "/login/qr/cancel", { query: { key } }).catch(() => {})
 }
 
 export async function qqPlaylists(settings: MusicSettings) {
-  await bindCookie(settings)
+  const cookie = accountCookie(settings)
   const uin = settings.qqUin || qqUinFromCookie(settings.qqCookie)
   if (!uin) throw new Error("缺少 QQ 号，无法拉取歌单。")
-  const payload = await musicRequest(settings.qqBase, "/user/songlist", { query: { id: uin } })
+  const payload = await musicRequest(settings.qqBase, "/user/songlist", { query: { id: uin }, cookie })
   return readQqPlaylists(payload)
 }
 
 export async function qqPlaylistTracks(settings: MusicSettings, playlistId: string) {
-  await bindCookie(settings)
-  const payload = await musicRequest(settings.qqBase, "/songlist", { query: { id: playlistId } })
+  const cookie = accountCookie(settings)
+  const payload = await musicRequest(settings.qqBase, "/songlist", { query: { id: playlistId }, cookie })
   return readQqSongs(payload)
 }
 
 export async function qqSearch(settings: MusicSettings, term: string) {
-  await bindCookie(settings)
-  const payload = await musicRequest(settings.qqBase, "/search", { query: { key: term, page: "1", t: "0" } })
+  const cookie = accountCookie(settings)
+  const payload = await musicRequest(settings.qqBase, "/search", { query: { key: term, page: "1", t: "0" }, cookie })
   return readQqSongs(payload)
 }
 
 export async function qqSong(settings: MusicSettings, nativeId: string) {
-  await bindCookie(settings)
+  const cookie = accountCookie(settings)
   const [urlPayload, lyricPayload] = await Promise.all([
-    musicRequest(settings.qqBase, "/song/urls", { query: { id: nativeId } }),
-    musicRequest(settings.qqBase, "/lyric", { query: { songmid: nativeId } }).catch(() => null),
+    musicRequest(settings.qqBase, "/song/urls", { query: { id: nativeId }, cookie }),
+    musicRequest(settings.qqBase, "/lyric", { query: { songmid: nativeId }, cookie }).catch(() => null),
   ])
   const urls = readQqUrls(urlPayload)
   const url = urls[nativeId] || Object.values(urls).find(Boolean) || null

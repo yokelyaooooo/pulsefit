@@ -24,7 +24,7 @@ export const muscleLabel: Record<MuscleId, string> = Object.fromEntries(MUSCLES)
 
 export type Equipment = "barbell" | "dumbbell" | "cable" | "machine" | "bodyweight" | "cardio"
 export type LoadMode = "barbell" | "dumbbell" | "bodyweight" | "machine"
-export type SetKind = "work" | "warmup" | "cardio"
+export type SetKind = "work" | "warmup" | "drop" | "cardio"
 export type TrainFocus = "push" | "pull" | "legs" | "shoulders" | "cardio" | "core"
 
 export interface ExerciseDef {
@@ -56,6 +56,8 @@ export interface SetEntry {
   reps: number
   seconds: number
   label: string
+  /** Undefined keeps pre-completion-tracking records compatible. */
+  completed?: boolean
 }
 
 export interface LoggedExercise {
@@ -63,6 +65,8 @@ export interface LoggedExercise {
   exerciseId: string
   name: string
   sets: SetEntry[]
+  notes?: string
+  supersetGroup?: string
 }
 
 export interface WorkoutLog {
@@ -75,9 +79,13 @@ export interface WorkoutLog {
   endedAt: string | null
   durationSec: number
   exercises: LoggedExercise[]
+  notes?: string
+  restSeconds?: number
+  restEndsAt?: string | null
 }
 
 export interface TrainState {
+  bodyGender?: "male" | "female"
   logs: WorkoutLog[]
   customExercises: ExerciseDef[]
   customPlans: PlanDef[]
