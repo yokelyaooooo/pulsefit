@@ -64,9 +64,6 @@ jobs:
           java-version: 21
       - run: npm ci
       - run: npx cap sync android
-      - name: Install Android SDK components
-        shell: bash
-        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - name: Build installable preview APK
         working-directory: android
         run: ./gradlew assembleDebug
