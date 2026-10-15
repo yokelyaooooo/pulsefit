@@ -27,7 +27,6 @@ struct Index {
         .javaScriptAccess(true)
         .domStorageAccess(true)
         .fileAccess(true)
-        .mixedMode(webview.MixedMode.All)
         .layoutWeight(1)
         .width('100%')
     }
