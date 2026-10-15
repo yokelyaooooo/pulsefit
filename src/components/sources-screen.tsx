@@ -2,22 +2,18 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react"
 import { ArrowRight, Check, ChevronRight, Headphones, LoaderCircle, LogOut, Music2, QrCode, RefreshCw, Settings2, ShieldCheck } from "lucide-react"
-import { appleAuthorize, appleDisconnect, appleLibrary, configureApple } from "@/lib/music/apple"
+import { appleAuthorize, appleDisconnect, configureApple } from "@/lib/music/apple"
 import { getMusicSnapshot, getServerMusicSnapshot, hydrateMusic, subscribeMusic, updateMusic } from "@/lib/music/config"
-import { neteaseAccount, neteasePlaylists } from "@/lib/music/netease"
-import { qqConnect, qqPlaylists } from "@/lib/music/qq"
-import type { CatalogItem, MusicSettings, PlaylistItem } from "@/lib/music/types"
-import { SourceMark } from "@/components/artwork"
+import { neteaseAccount } from "@/lib/music/netease"
+import { qqConnect } from "@/lib/music/qq"
+import type { MusicSettings } from "@/lib/music/types"
 import { PlatformLogo } from "@/components/platform-logo"
-import { CoverArt } from "@/components/cover-art"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
-import { usePlayer } from "@/components/player-provider"
 import { MusicLoginDialog, providerNames, type LoginProvider } from "@/components/music-login-dialog"
-import { rememberCatalog } from "@/lib/music/local"
-import { tracksForPlaylist } from "@/lib/music/resolve"
-import { rememberImported } from "@/lib/music/wall"
+import { forgetProviderLibrary, getLibrarySnapshot, getServerLibrarySnapshot, hydrateLibrary, subscribeLibrary, syncProviderLibrary } from "@/lib/music/library"
+import { SyncedPlaylists } from "@/components/synced-playlists"
 import "./music-services.css"
 
 const providers: LoginProvider[] = ["netease", "qq", "apple"]
@@ -25,34 +21,30 @@ const subtitles = { netease: "把每一份热爱，带进训练", qq: "熟悉的
 
 export function SourcesScreen() {
   const settings = useSyncExternalStore(subscribeMusic, getMusicSnapshot, getServerMusicSnapshot)
-  const player = usePlayer()
+  const library = useSyncExternalStore(subscribeLibrary, getLibrarySnapshot, getServerLibrarySnapshot)
   const [message, setMessage] = useState("")
   const [busy, setBusy] = useState("")
   const [login, setLogin] = useState<LoginProvider | null>(null)
   const [editing, setEditing] = useState<LoginProvider | null>(null)
-  const [lists, setLists] = useState<PlaylistItem[]>([])
   const [appleReady, setAppleReady] = useState(false)
-  useEffect(() => { queueMicrotask(hydrateMusic) }, [])
+  useEffect(() => { queueMicrotask(() => { hydrateMusic(); hydrateLibrary() }) }, [])
   useEffect(() => {
     let active = true
     queueMicrotask(() => { if (active) setAppleReady(false) })
-    if (settings.appleToken) void configureApple(settings.appleToken).then((music) => { if (active) setAppleReady(music.isAuthorized) }).catch(() => {})
+    if (settings.appleToken) void configureApple(settings.appleToken).then((music) => { if (active) setAppleReady(music.isAuthorized || settings.appleConnected) }).catch(() => {})
     return () => { active = false }
-  }, [settings.appleToken])
+  }, [settings.appleConnected, settings.appleToken])
 
   const sync = useCallback(async (provider: LoginProvider) => {
     setBusy(provider)
     try {
-      const current = getMusicSnapshot()
-      const items = provider === "netease" ? await neteasePlaylists(current) : provider === "qq" ? await qqPlaylists(current) : await appleLibrary(current.appleToken)
-      setLists((old) => [...old.filter((item) => item.source !== provider), ...items])
-      rememberImported(items.map((item) => ({ id: item.id, title: item.name, artist: providerNames[provider], artwork: item.cover || "", source: item.source })))
+      const items = await syncProviderLibrary(provider, getMusicSnapshot())
       setMessage(`${providerNames[provider]} · ${items.length ? `已同步 ${items.length} 个歌单` : "已连接，暂无可同步的歌单"}`)
     } catch (error) { setMessage(error instanceof Error ? error.message : "歌单同步失败，请稍后重试。") }
     finally { setBusy("") }
   }, [])
   const connected = useCallback((provider: LoginProvider) => {
-    if (provider === "apple") setAppleReady(true)
+    if (provider === "apple") { setAppleReady(true); updateMusic({ appleConnected: true }) }
     void sync(provider)
   }, [sync])
 
@@ -61,8 +53,8 @@ export function SourcesScreen() {
     try {
       if (provider === "netease") updateMusic({ neteaseCookie: "", neteaseUid: "", neteaseName: "" })
       if (provider === "qq") updateMusic({ qqCookie: "", qqUin: "", qqName: "" })
-      if (provider === "apple") { await appleDisconnect(); setAppleReady(false) }
-      setLists((old) => old.filter((item) => item.source !== provider))
+      if (provider === "apple") { await appleDisconnect(); updateMusic({ appleConnected: false }); setAppleReady(false) }
+      forgetProviderLibrary(provider)
       setMessage(`已断开 ${providerNames[provider]}`)
     } catch { setMessage("暂时无法退出，请重试。") }
     finally { setBusy("") }
@@ -74,18 +66,6 @@ export function SourcesScreen() {
       if (!await appleAuthorize(getMusicSnapshot().appleToken)) throw new Error("尚未完成 Apple Music 授权。")
       connected("apple")
     } catch (error) { setMessage(error instanceof Error ? error.message : "授权失败，请重试。"); setBusy("") }
-  }
-
-  async function playList(list: PlaylistItem) {
-    setBusy(list.id)
-    try {
-      const items = await tracksForPlaylist(list.source, list.nativeId, getMusicSnapshot())
-      rememberCatalog(items)
-      rememberTracks(items)
-      if (items[0]) { await player.playTrack(items[0].id, { queue: items.map((item) => item.id) }); setMessage(`正在播放「${list.name}」`) }
-      else setMessage("这个歌单暂无可播放的歌曲。")
-    } catch (error) { setMessage(error instanceof Error ? error.message : "歌单读取失败。") }
-    finally { setBusy("") }
   }
 
   return <div className="services-page">
@@ -103,12 +83,11 @@ export function SourcesScreen() {
     })}</div>
     <section className="services-local"><div className="services-local-icon"><Music2 size={23} /></div><div><h2>本地训练节拍<span>始终可用</span></h2><p>无需登录，随时跟上自己的节奏。</p></div><CheckCircle /></section>
     <p className="services-footnote">音乐播放范围取决于你的账号、订阅及所在地区。扫码仅用于连接你的个人账号。</p>
-    {lists.length > 0 && <section className="services-playlists"><header><h2>你的歌单</h2><span>{lists.length} 个歌单</span></header><div>{lists.map((list) => <button key={list.id} disabled={Boolean(busy)} onClick={() => void playList(list)}>{list.cover?.startsWith("https://") ? <CoverArt seed={list.id} title={list.name} artwork={list.cover} className="services-playlist-cover" /> : <SourceMark source={list.source} className="size-12 rounded-xl" />}<span><strong>{list.name}</strong><small>{providerNames[list.source as LoginProvider]}{list.trackCount != null ? ` · ${list.trackCount} 首` : ""}</small></span><ChevronRight size={17} /></button>)}</div></section>}
+    <SyncedPlaylists playlists={library.playlists} busy={Boolean(busy)} syncing={Boolean(busy)} />
     {login && <MusicLoginDialog provider={login} onClose={() => setLogin(null)} onConnected={connected} />}
     {editing && <ConnectionSettings key={editing} provider={editing} settings={settings} onClose={() => setEditing(null)} onConnected={connected} onSaved={(note) => { setMessage(note); setEditing(null) }} />}
   </div>
 }
-
 function CheckCircle() { return <span className="services-local-check"><Check size={17} /></span> }
 
 function ConnectionSettings({ provider, settings, onClose, onConnected, onSaved }: { provider: LoginProvider; settings: MusicSettings; onClose: () => void; onConnected: (provider: LoginProvider) => void; onSaved: (note: string) => void }) {
@@ -121,7 +100,7 @@ function ConnectionSettings({ provider, settings, onClose, onConnected, onSaved 
     setBusy(true); setError("")
     try {
       const current = getMusicSnapshot()
-      if (provider === "apple") { await appleDisconnect(); updateMusic({ appleToken: credential.trim() }); onSaved("Apple Music 连接设置已保存，请扫码或在此设备授权。"); return }
+      if (provider === "apple") { await appleDisconnect(); updateMusic({ appleToken: credential.trim(), appleConnected: false }); onSaved("Apple Music 连接设置已保存，请扫码或在此设备授权。"); return }
       if (!base.trim()) throw new Error("请输入音乐服务地址。")
       if (connect) {
         if (!credential.trim()) throw new Error("请填写你自己账号的 Cookie。")
@@ -148,8 +127,4 @@ function ConnectionSettings({ provider, settings, onClose, onConnected, onSaved 
     {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => void save(false)}>保存设置</Button>{provider !== "apple" && <Button variant="secondary" disabled={busy || !credential.trim()} onClick={() => void save(true)}>{busy ? "正在验证…" : "验证并导入"}</Button>}</div>
   </DialogContent></Dialog>
-}
-
-function rememberTracks(items: CatalogItem[]) {
-  rememberImported(items.map((item) => ({ id: item.id, title: item.title, artist: item.artist || item.album, artwork: item.artwork || "", source: item.source })))
 }

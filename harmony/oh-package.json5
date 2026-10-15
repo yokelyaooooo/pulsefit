@@ -1,7 +1,7 @@
 {
   "modelVersion": "5.0.0",
   "name": "pulsefit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "燃律 PulseFit HarmonyOS wrapper",
   "main": "",
   "author": "pulsefit",

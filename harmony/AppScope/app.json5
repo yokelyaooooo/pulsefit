@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "com.pulsefit.app",
     "vendor": "pulsefit",
-    "versionCode": 1000000,
-    "versionName": "1.0.0",
+    "versionCode": 1100000,
+    "versionName": "1.1.0",
     "icon": "$media:app_icon",
     "label": "$string:app_name"
   }

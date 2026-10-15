@@ -14,11 +14,22 @@ export interface CatalogItem {
 
 export interface PlaylistItem {
   id: string
-  source: MusicSource
+  source: Exclude<MusicSource, "local">
   nativeId: string
   name: string
   cover: string | null
   trackCount: number | null
+  isLiked?: boolean
+}
+
+export interface SyncedPlaylist extends PlaylistItem {
+  tracks: CatalogItem[]
+  syncedAt: number
+}
+
+export interface SyncedLibraryState {
+  playlists: SyncedPlaylist[]
+  updatedAt: number
 }
 
 export interface Playable extends CatalogItem {
@@ -32,6 +43,7 @@ export interface MusicSettings {
   neteaseBase: string
   qqBase: string
   appleToken: string
+  appleConnected: boolean
   neteaseCookie: string
   neteaseUid: string
   neteaseName: string

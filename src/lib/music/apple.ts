@@ -68,7 +68,7 @@ export async function configureApple(token: string) {
   if (configuredToken !== trimmed) {
     await window.MusicKit.configure({
       developerToken: trimmed,
-      app: { name: "燃律 PulseFit", build: "1.0.0" },
+      app: { name: "燃律 PulseFit", build: "1.1.0" },
     })
     configuredToken = trimmed
   }

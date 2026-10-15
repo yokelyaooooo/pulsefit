@@ -112,6 +112,9 @@
 .music-browse-card svg { position: absolute; right: 15px; bottom: 15px; z-index: 2; color: #fff; }
 .music-note { margin: 15px 0; font-size: 12px; color: #a75966; }
 .music-chart-art { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 9px; background: #e9e5ed; }
+.music-chart-card { position: relative; }
+.music-chart-play { position: absolute; right: 9px; bottom: 50px; display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid #ffffff70; border-radius: 50%; color: #fff; background: #19141d75; box-shadow: 0 4px 12px #17121c2c; backdrop-filter: blur(13px); opacity: 0; transform: translateY(3px); transition: opacity .2s ease, transform .2s ease; }
+.music-chart-card:hover .music-chart-play, .music-chart-card:focus-visible .music-chart-play { opacity: 1; transform: none; }
 .music-chart-caption { margin-top: 5px; color: var(--label-secondary); font-size: 10px; }
 @media (min-width: 1500px) { .music-hero { height: 350px; } .music-glass-disc { width: 250px; height: 250px; right: -35px; } .music-glass-disc > span { inset: 70px; } .music-glass-disc > i { inset: 109px; } .music-hero-big-type { font-size: 67px; } }
 @media (max-width: 1100px) and (min-width: 761px) { .music-station-grid { grid-template-columns: 1fr; } .music-station { padding: 14px 17px; } .music-station small { display: inline; } .music-station strong { display: inline; margin-right: 9px; } .music-hero-big-type { font-size: 43px; } .music-glass-disc { width: 185px; height: 185px; right: -60px; top: 75px; } .music-glass-disc > span { inset: 51px; } .music-glass-disc > i { inset: 78px; } .music-unwind-type { font-size: 34px; } }
@@ -137,6 +140,7 @@
   .music-album-rail { grid-auto-columns: 43%; gap: 15px; margin-inline: -20px; padding-inline: 20px; }
   .music-album-lettering strong { font-size: 26px; }
   .music-album-play { opacity: 1; }
+  .music-chart-play { opacity: 1; transform: none; }
   .music-station-grid { grid-template-columns: 1fr; gap: 9px; }
   .music-station { padding: 15px 18px; gap: 14px; }
   .music-station small { font-size: 11px; }

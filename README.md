@@ -87,18 +87,18 @@ CAP_SERVER_URL=http://10.0.2.2:41731 npx cap sync android
 
 ## Release 产物
 
-`v1.0.0` 发布包按平台提供：
+`v1.1.0` 发布包按平台提供：
 
-- `PulseFit-v1.0.0-web-server.zip`：Node.js 独立 Web 服务，解压后运行 `node server.js`，默认监听 3000 端口。
-- `PulseFit-v1.0.0-android-preview.apk`：使用 Android 调试签名生成的可安装预览包，适合验收，不用于应用商店发布。
-- `PulseFit-v1.0.0-ios-xcode.zip`：已同步资源的 Xcode 工程，需要在 macOS 上选择开发团队后归档签名。
-- `PulseFit-v1.0.0-harmony-deveco.zip`：已同步资源的 DevEco Studio 工程，需要配置鸿蒙 SDK 与签名后生成 HAP/App Pack。
+- `PulseFit-v1.1.0-web-server.zip`：Node.js 独立 Web 服务，解压后运行 `node server.js`，默认监听 3000 端口。
+- `PulseFit-v1.1.0-android-preview.apk`：使用 Android 调试签名生成的可安装预览包，适合验收，不用于应用商店发布。
+- `PulseFit-v1.1.0-ios-unsigned.app.zip`：由 GitHub Actions 在 macOS 上实际编译的未签名 iOS 应用，配置开发团队并签名后可安装。
+- `PulseFit-v1.1.0-harmony-unsigned.hap`：由 GitHub Actions 使用 HarmonyOS 命令行工具实际编译的未签名 HAP，签名后可安装。
 
 移动端工程是 WebView 外壳，正式发布前请通过 `CAP_SERVER_URL` 指向已经部署的燃律 Web 服务。Apple 与鸿蒙的正式安装包必须由各自官方工具和开发者证书签名，仓库不保存签名凭据。
 
 ## iOS
 
-`ios/` 是 Capacitor 生成的 Xcode 工程，bundle id `com.pulsefit.app`，显示名燃律。当前 Windows 构建环境没有 Xcode，**没有编译 iOS**。
+`ios/` 是 Capacitor 生成的 Xcode 工程，bundle id `com.pulsefit.app`，显示名燃律。Release 工作流在 GitHub 的 macOS Runner 上执行 `xcodebuild`，并发布未签名的 `.app` 压缩包。
 
 ```bash
 CAP_SERVER_URL=http://127.0.0.1:41731 npx cap sync ios
@@ -111,7 +111,7 @@ npx cap open ios
 
 `harmony/` 是 Stage 模型的 ArkTS 工程，`bundleName` 为 `com.pulsefit.app`。入口页用 ArkWeb 打开燃律，默认 `http://127.0.0.1:41731`，页面上可以改地址。
 
-当前环境没有 DevEco Studio，**没有编译鸿蒙包**。在 DevEco Studio 中打开 `harmony/`，按向导补签名后运行到模拟器或真机。模拟器要能访问你填写的燃律地址，并已在 `module.json5` 里申请 `ohos.permission.INTERNET`。
+Release 工作流会安装 HarmonyOS 6.1 命令行工具，运行 Hvigor 并发布未签名 HAP。在 DevEco Studio 中打开 `harmony/` 后可配置正式签名并运行到模拟器或真机。模拟器要能访问你填写的燃律地址，并已在 `module.json5` 里申请 `ohos.permission.INTERNET`。
 
 ## 这次实际验证了什么
 
@@ -119,8 +119,8 @@ npx cap open ios
 - `npm run lint` 和 `tsc --noEmit`。
 - 开发服务器 `http://127.0.0.1:41731`。
 - Android `./gradlew assembleDebug` 成功。
-- iOS 工程已生成，未编译。
-- 鸿蒙工程已生成，未编译。
+- iOS 由 GitHub Actions 在 macOS Runner 上完成无签名编译，并检查 `.app` 产物存在。
+- 鸿蒙由 GitHub Actions 调用 Hvigor 完成无签名编译，并检查 `.hap` 产物存在。
 - 网易云、QQ 的真实二维码生成和轮询已验证；账号确认、会员曲播放及 Apple Music 授权需要实际账号和有效 developer token，未在仓库环境中代替用户完成。
 
 ## 2026-10-14 界面重构验收

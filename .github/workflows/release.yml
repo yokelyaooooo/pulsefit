@@ -1,6 +1,7 @@
 name: Release builds
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -78,9 +79,11 @@ jobs:
           path: release/PulseFit-*-android-preview.apk
           if-no-files-found: error
 
-  native-projects:
+  ios:
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
+    env:
+      CAP_SERVER_URL: ${{ vars.CAP_SERVER_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -89,20 +92,97 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx cap sync ios
-      - name: Package native projects
+      - name: Compile unsigned iOS app
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+      - name: Package unsigned iOS app
+        run: |
+          mkdir -p release
+          test -d ios/build/Build/Products/Release-iphoneos/App.app
+          ditto -c -k --sequesterRsrc --keepParent \
+            ios/build/Build/Products/Release-iphoneos/App.app \
+            "release/PulseFit-${GITHUB_REF_NAME}-ios-unsigned.app.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned
+          path: release/PulseFit-*-ios-unsigned.app.zip
+          if-no-files-found: error
+
+  harmony:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Cache HarmonyOS command-line tools
+        id: harmony-tools
+        uses: actions/cache@v4
+        with:
+          path: command-line-tools
+          key: ${{ runner.os }}-harmony-tools-6.1.0.816
+      - name: Download HarmonyOS command-line tools
+        if: steps.harmony-tools.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 \
+            --output harmony-tools.zip \
+            https://github.com/Okysu/harmony-auto-build/releases/download/commandline-tools-linux-x64-6.1.0.816/commandline-tools-linux-x64-6.1.0.816.zip
+          unzip -q harmony-tools.zip
+          rm harmony-tools.zip
+      - name: Configure HarmonyOS toolchain
+        shell: bash
+        run: |
+          TOOLS_DIR="$GITHUB_WORKSPACE/command-line-tools"
+          test -f "$TOOLS_DIR/bin/hvigorw"
+          test -f "$TOOLS_DIR/bin/ohpm"
+          echo "hwsdk.dir=$TOOLS_DIR/sdk" > harmony/local.properties
+          echo "$TOOLS_DIR/bin" >> "$GITHUB_PATH"
+          echo "OHPM_HOME=$TOOLS_DIR/ohpm" >> "$GITHUB_ENV"
+          echo "HOS_SDK_HOME=$TOOLS_DIR/sdk" >> "$GITHUB_ENV"
+          chmod -R +x "$TOOLS_DIR/bin"
+          "$TOOLS_DIR/bin/hvigorw" -v
+          "$TOOLS_DIR/bin/ohpm" -v
+      - name: Install HarmonyOS dependencies
+        shell: bash
+        run: |
+          cd harmony
+          ohpm config set registry https://ohpm.openharmony.cn/ohpm/
+          ohpm install --all
+          cd entry
+          ohpm install --all
+      - name: Compile unsigned HarmonyOS HAP
+        working-directory: harmony
+        run: hvigorw assembleHap --mode module -p module=entry@default -p product=default -p buildMode=debug --no-daemon
+      - name: Collect HarmonyOS HAP
         shell: bash
         run: |
           mkdir -p release
-          zip -qr "release/PulseFit-${GITHUB_REF_NAME}-ios-xcode.zip" ios
-          zip -qr "release/PulseFit-${GITHUB_REF_NAME}-harmony-deveco.zip" harmony
+          HAP_PATH=$(find harmony/entry/build -type f -name '*-unsigned.hap' -print -quit)
+          if [ -z "$HAP_PATH" ]; then
+            HAP_PATH=$(find harmony/entry/build -type f -name '*.hap' -print -quit)
+          fi
+          test -n "$HAP_PATH"
+          cp "$HAP_PATH" "release/PulseFit-${GITHUB_REF_NAME}-harmony-unsigned.hap"
       - uses: actions/upload-artifact@v4
         with:
-          name: native-projects
-          path: release/PulseFit-*.zip
+          name: harmony-unsigned
+          path: release/PulseFit-*-harmony-unsigned.hap
           if-no-files-found: error
 
   publish:
-    needs: [web, android, native-projects]
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [web, android, ios, harmony]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useSyncExternalStore } from "react"
+import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { ArrowUpRight, ChevronRight, Dumbbell, Music2, Play, Radio } from "lucide-react"
 import { CoverWall } from "@/components/cover-wall"
 import { MusicHeader, MusicSectionHeading, MusicTrackCard } from "@/components/music-ui"
 import { usePlayer } from "@/components/player-provider"
 import { tracks } from "@/lib/catalog"
-import { getServerWallSnapshot, getWallSnapshot, hydrateWall, subscribeWall } from "@/lib/music/wall"
 import { getMusicSnapshot, getServerMusicSnapshot, hydrateMusic, subscribeMusic } from "@/lib/music/config"
+import { connectedProviders, getLibrarySnapshot, getServerLibrarySnapshot, hydrateLibrary, subscribeLibrary, syncProviderLibrary } from "@/lib/music/library"
+import { likedPlaylist } from "@/lib/music/library-data"
 import { hydratePersisted } from "@/lib/storage"
 import "@/components/music-home.css"
 
@@ -16,15 +17,29 @@ const essentials = ["meltdown", "iron-law", "night-run", "tide", "flow", "embers
 
 export function HomeScreen() {
   const player = usePlayer()
-  const wall = useSyncExternalStore(subscribeWall, getWallSnapshot, getServerWallSnapshot)
   const music = useSyncExternalStore(subscribeMusic, getMusicSnapshot, getServerMusicSnapshot)
+  const library = useSyncExternalStore(subscribeLibrary, getLibrarySnapshot, getServerLibrarySnapshot)
+  const attemptedSync = useRef(new Set<string>())
+  const [ready, setReady] = useState(false)
   const recommended = essentials.flatMap((id) => tracks.filter((track) => track.id === id))
 
   useEffect(() => {
-    hydratePersisted()
-    hydrateWall()
-    hydrateMusic()
+    queueMicrotask(() => {
+      hydratePersisted()
+      hydrateMusic()
+      hydrateLibrary()
+      setReady(true)
+    })
   }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    for (const provider of connectedProviders(music)) {
+      if (library.playlists.some((playlist) => playlist.source === provider) || attemptedSync.current.has(provider)) continue
+      attemptedSync.current.add(provider)
+      void syncProviderLibrary(provider, music).catch(() => { attemptedSync.current.delete(provider) })
+    }
+  }, [library.playlists, music, ready])
 
   function playMix(ids: string[]) {
     if (ids[0]) void player.playTrack(ids[0], { queue: ids, loop: false })
@@ -84,7 +99,7 @@ export function HomeScreen() {
         </div>
       </section>
 
-      <CoverWall personal={wall.imported.filter((cover) => cover.source === "netease" ? Boolean(music.neteaseCookie || music.neteaseName) : cover.source === "qq" ? Boolean(music.qqCookie || music.qqName) : cover.source === "apple" ? Boolean(music.appleToken) : true)} />
+      <CoverWall liked={likedPlaylist(library.playlists)} />
 
       <Link href="/train" className="music-training-link"><span className="music-training-icon"><Dumbbell size={23} /></span><span><strong>音乐就位，开始今天的训练</strong><small>记录每一组，见证每一点进步。</small></span><ChevronRight size={19} /></Link>
       <footer className="music-page-footer"><span>PulseFit 原创合成节拍 · 为运动而生</span><Link href="/sources">连接你的音乐服务 <ArrowUpRight size={13} /></Link></footer>

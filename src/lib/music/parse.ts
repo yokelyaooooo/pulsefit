@@ -69,6 +69,7 @@ export function readNeteasePlaylists(payload: unknown): PlaylistItem[] {
         name: text(item.name) || "歌单",
         cover: text(item.coverImgUrl) || null,
         trackCount: num(item.trackCount),
+        isLiked: num(item.specialType) === 5,
       },
     ]
   })
@@ -189,6 +190,7 @@ export function readQqPlaylists(payload: unknown): PlaylistItem[] {
       name,
       cover: text(row.diss_cover) || text(row.logo) || null,
       trackCount: num(row.song_cnt) ?? num(row.songnum) ?? num(row.total_song_num),
+      isLiked: /我喜欢|喜欢的音乐|收藏|favorite|liked/i.test(name),
     })
   })
   return found
@@ -249,6 +251,7 @@ export function readApplePlaylists(payload: unknown): PlaylistItem[] {
         name: text(attributes.name) || "播放列表",
         cover: artworkUrl(record(attributes.artwork), 300),
         trackCount: num(attributes.trackCount),
+        isLiked: /我喜欢|喜欢的音乐|收藏|favorite|liked/i.test(text(attributes.name)),
       },
     ]
   })

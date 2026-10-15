@@ -46,7 +46,7 @@ export function MusicLoginDialog({ provider, onClose, onConnected }: { provider:
             if (!("userToken" in result) || !result.userToken || !result.developerToken) throw new Error("Apple 授权尚未返回，请重试。")
             await appleAcceptUserToken(result.developerToken, result.userToken)
             if (signal.aborted) return
-            updateMusic({ appleToken: result.developerToken })
+            updateMusic({ appleToken: result.developerToken, appleConnected: true })
           } else {
             if (!("cookie" in result) || !result.cookie) throw new Error("平台尚未返回音乐授权，请刷新二维码。")
             credential = { cookie: result.cookie, uin: "uin" in result ? result.uin : undefined, name: "name" in result ? result.name : undefined }

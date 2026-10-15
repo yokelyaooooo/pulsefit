@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { ArrowUpRight, Heart, Music2, Pause, Play, Search, Shuffle } from "lucide-react"
 import { CoverArt } from "@/components/cover-art"
@@ -11,15 +11,41 @@ import { usePlayer } from "@/components/player-provider"
 import { tagLabel, tracks } from "@/lib/catalog"
 import type { WorkoutTag } from "@/lib/types"
 import { formatClock } from "@/lib/audio/clock"
+import { SyncedPlaylists } from "@/components/synced-playlists"
+import { getMusicSnapshot, getServerMusicSnapshot, hydrateMusic, subscribeMusic } from "@/lib/music/config"
+import { connectedProviders, getLibrarySnapshot, getServerLibrarySnapshot, hydrateLibrary, subscribeLibrary, syncProviderLibrary } from "@/lib/music/library"
 import "@/components/music-home.css"
 
 const filters = ["all", "saved", "hiit", "strength", "cardio", "yoga", "recover"] as const
 
 export function LibraryScreen() {
   const player = usePlayer()
+  const settings = useSyncExternalStore(subscribeMusic, getMusicSnapshot, getServerMusicSnapshot)
+  const library = useSyncExternalStore(subscribeLibrary, getLibrarySnapshot, getServerLibrarySnapshot)
   usePersistedStore()
   const [filter, setFilter] = useState<(typeof filters)[number]>("all")
   const [query, setQuery] = useState("")
+  const [syncing, setSyncing] = useState(false)
+  const [ready, setReady] = useState(false)
+  const attemptedSync = useRef(new Set<string>())
+
+  useEffect(() => { queueMicrotask(() => { hydrateMusic(); hydrateLibrary(); setReady(true) }) }, [])
+  useEffect(() => {
+    if (!ready) return
+    const missing = connectedProviders(settings).filter((provider) => !library.playlists.some((playlist) => playlist.source === provider) && !attemptedSync.current.has(provider))
+    if (!missing.length) return
+    missing.forEach((provider) => attemptedSync.current.add(provider))
+    queueMicrotask(() => setSyncing(true))
+    void Promise.allSettled(missing.map((provider) => syncProviderLibrary(provider, settings))).finally(() => setSyncing(false))
+  }, [library.playlists, ready, settings])
+
+  async function refreshSynced() {
+    const providers = connectedProviders(getMusicSnapshot())
+    if (!providers.length) return
+    setSyncing(true)
+    await Promise.allSettled(providers.map((provider) => syncProviderLibrary(provider, getMusicSnapshot())))
+    setSyncing(false)
+  }
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -38,6 +64,7 @@ export function LibraryScreen() {
 
   return <div className="music-page">
     <MusicHeader title="资料库" subtitle="喜欢的节拍，随时回到你身边。" />
+    <SyncedPlaylists playlists={library.playlists} syncing={syncing} busy={syncing} onRefresh={() => void refreshSynced()} />
     <section>
       <MusicSectionHeading title="你的训练原声带" />
       <div className="music-album-rail">{[tracks[0], tracks[2], tracks[7], tracks[8]].map((track) => <MusicTrackCard key={track.id} track={track} queue={tracks.map((item) => item.id)} />)}</div>

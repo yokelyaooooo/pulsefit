@@ -4,14 +4,17 @@ import { useEffect, useRef, useState } from "react"
 import { Pause, Play } from "lucide-react"
 import { CoverArt } from "@/components/cover-art"
 import { MusicSectionHeading } from "@/components/music-ui"
-import { rankCovers, type WallCover } from "@/lib/music/wall"
+import { usePlayer } from "@/components/player-provider"
+import { musicSourceName, playlistAnchorId } from "@/lib/music/library-data"
+import { rememberCatalog } from "@/lib/music/local"
+import type { CatalogItem, SyncedPlaylist } from "@/lib/music/types"
 
 interface ChartAlbum { title: string; artist: string; artwork: string }
 
-export function CoverWall({ personal }: { personal: WallCover[] }) {
-  const ranked = rankCovers(personal)
-  const own = ranked.length > 0
+export function CoverWall({ liked }: { liked: SyncedPlaylist | null }) {
+  const own = Boolean(liked?.tracks.length)
   const [charts, setCharts] = useState<ChartAlbum[]>([])
+  const player = usePlayer()
 
   useEffect(() => {
     if (own) return
@@ -27,13 +30,21 @@ export function CoverWall({ personal }: { personal: WallCover[] }) {
     return () => controller.abort()
   }, [own])
 
-  const cards = own ? ranked : charts
+  const cards = own ? liked!.tracks.slice(0, 10) : charts
   if (!cards.length) return null
 
-  return <section className="music-section"><MusicSectionHeading title={own ? "你的常听专辑" : "正在流行的专辑"} subtitle={own ? "来自你导入的歌单" : "发现更多值得一听的声音"} href="/sources" /><AlbumDrift cards={cards.slice(0, 12)} /><p className="music-chart-caption">{own ? "已导入的专辑封面，可在搜索中查找并播放歌曲。" : "iTunes 公开专辑榜 · 封面预览，播放歌曲需连接相应音乐服务。"}</p></section>
+  function play(track: CatalogItem) {
+    if (!liked) return
+    rememberCatalog(liked.tracks)
+    if (player.trackId === track.id) void player.toggle()
+    else void player.playTrack(track.id, { queue: liked.tracks.map((item) => item.id), loop: false })
+  }
+
+  const href = liked ? `/library#${playlistAnchorId(liked.id)}` : "/sources"
+  return <section className="music-section"><MusicSectionHeading title={own ? "我喜欢的音乐" : "正在流行的专辑"} subtitle={own ? `${musicSourceName(liked!.source)} · 前 10 首歌曲` : "发现更多值得一听的声音"} href={href} /><AlbumDrift cards={cards.slice(0, 12)} onPlay={own ? (track) => play(track as CatalogItem) : undefined} /><p className="music-chart-caption">{own ? "登录后自动同步 · 点按封面即可播放，查看全部会展开“我喜欢”歌单。" : "iTunes 公开专辑榜 · 封面预览，播放歌曲需连接相应音乐服务。"}</p></section>
 }
 
-function AlbumDrift({ cards }: { cards: ChartAlbum[] }) {
+function AlbumDrift({ cards, onPlay }: { cards: Array<ChartAlbum | CatalogItem>; onPlay?: (track: ChartAlbum | CatalogItem) => void }) {
   const rail = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
   const loop = cards.length > 4
@@ -91,7 +102,7 @@ function AlbumDrift({ cards }: { cards: ChartAlbum[] }) {
 
   return <div className="music-drift">
     <div ref={rail} className="music-album-rail music-drift-rail" tabIndex={0} role="region" aria-label="专辑封面，可左右滚动；悬停或聚焦时暂停自动滚动">
-      {(loop ? [...cards, ...cards] : cards).map((cover, index) => <figure key={`${cover.artwork}-${index}`} className="music-album-card" aria-hidden={index >= cards.length || undefined} data-loop-start={loop && index === cards.length ? "" : undefined}><CoverArt seed={cover.title} title={cover.title} artwork={cover.artwork} className="music-chart-art" /><figcaption><strong className="music-album-name">{cover.title}</strong><span className="music-album-byline">{cover.artist}</span></figcaption></figure>)}
+      {(loop ? [...cards, ...cards] : cards).map((cover, index) => <button type="button" key={`${cover.artwork}-${"id" in cover ? cover.id : cover.title}-${index}`} className="music-album-card music-chart-card" aria-hidden={index >= cards.length || undefined} aria-disabled={!onPlay || undefined} tabIndex={index >= cards.length || !onPlay ? -1 : undefined} data-loop-start={loop && index === cards.length ? "" : undefined} onClick={() => onPlay?.(cover)}><CoverArt seed={cover.title} title={cover.title} artwork={cover.artwork} className="music-chart-art" /><span><strong className="music-album-name">{cover.title}</strong><span className="music-album-byline">{cover.artist}</span></span>{onPlay ? <span className="music-chart-play"><Play size={15} fill="currentColor" /></span> : null}</button>)}
     </div>
     {loop && <button type="button" className="music-drift-toggle" aria-label={paused ? "继续专辑自动滚动" : "暂停专辑自动滚动"} aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? <Play size={12} /> : <Pause size={12} />}<span>{paused ? "继续滚动" : "自动漫游"}</span></button>}
   </div>
