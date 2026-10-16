@@ -5,7 +5,7 @@
   "description": "燃律 PulseFit HarmonyOS wrapper",
   "main": "",
   "author": "pulsefit",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "dependencies": {},
   "devDependencies": {}
 }

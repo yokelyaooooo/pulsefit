@@ -4,6 +4,6 @@
   "description": "燃律 PulseFit entry",
   "main": "",
   "author": "pulsefit",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "dependencies": {}
 }
