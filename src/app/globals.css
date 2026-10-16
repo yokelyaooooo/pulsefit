@@ -335,7 +335,8 @@ html::-webkit-scrollbar-button {
 /* Shared glass shell. Keep fixed UI outside any transformed/scrolling ancestor. */
 :root { --sidebar-width: 220px; --music-accent: #ce4269; --training-accent: #7561c9; }
 html { max-width: 100%; scroll-padding-bottom: 180px; }
-body { max-width: 100%; margin: 0; overflow-x: clip; }
+body { max-width: 100%; margin: 0; overflow-x: clip; -webkit-touch-callout: none; }
+input, textarea, [contenteditable='true'] { -webkit-user-select: text; user-select: text; }
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button:not(:disabled), a { touch-action: manipulation; }
 button:not(:disabled) { cursor: pointer; }
@@ -391,7 +392,7 @@ button:not(:disabled) { cursor: pointer; }
 @media (max-width: 1100px) and (min-width: 901px) { .app-content { padding-left: 28px; padding-right: 28px; } .app-topbar { padding: 0 28px; } }
 @media (max-width: 900px) {
   :root { --sidebar-width: 0px; }
-  html, body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
   body { position: fixed; inset: 0; }
   .app-frame { display: flex; width: 100%; height: 100dvh; min-height: 0; overflow: hidden; }
   .app-sidebar, .desktop-breadcrumb { display: none; }

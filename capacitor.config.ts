@@ -18,6 +18,8 @@ const config: CapacitorConfig = {
   ios: {
     backgroundColor: "#f7f6fb",
     contentInset: "never",
+    allowsLinkPreview: false,
+    preferredContentMode: "mobile",
   },
   android: {
     backgroundColor: "#f7f6fb",
