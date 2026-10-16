@@ -1,25 +1,53 @@
-import {
-  cloudsearch, login_qr_check, login_qr_create, login_qr_key, login_status,
-  lyric, playlist_track_all, song_url_v1, user_account, user_playlist,
-} from "NeteaseCloudMusicApi"
+import cloudsearch from "NeteaseCloudMusicApi/module/cloudsearch"
+import loginQrCheck from "NeteaseCloudMusicApi/module/login_qr_check"
+import loginQrCreate from "NeteaseCloudMusicApi/module/login_qr_create"
+import loginQrKey from "NeteaseCloudMusicApi/module/login_qr_key"
+import loginStatus from "NeteaseCloudMusicApi/module/login_status"
+import lyric from "NeteaseCloudMusicApi/module/lyric"
+import playlistTrackAll from "NeteaseCloudMusicApi/module/playlist_track_all"
+import songUrlV1 from "NeteaseCloudMusicApi/module/song_url_v1"
+import userAccount from "NeteaseCloudMusicApi/module/user_account"
+import userPlaylist from "NeteaseCloudMusicApi/module/user_playlist"
+import neteaseRequest from "NeteaseCloudMusicApi/util/request"
 import { isSameOriginRequest } from "@/lib/music/auth-data"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-type ApiCall = (params: Record<string, string>) => Promise<{ body: unknown; cookie?: string[] }>
+type ApiResult = { body: unknown; cookie?: string[] }
+type NeteaseModule = (
+  params: Record<string, unknown>,
+  request: typeof neteaseRequest,
+) => Promise<ApiResult>
+type ApiCall = (params: Record<string, string>) => Promise<ApiResult>
+
+function cookieToObject(cookie: string) {
+  return Object.fromEntries(cookie.split(";").flatMap((part) => {
+    const separator = part.indexOf("=")
+    if (separator < 1) return []
+    return [[part.slice(0, separator).trim(), part.slice(separator + 1).trim()]]
+  }))
+}
+
+function bindModule(operation: NeteaseModule): ApiCall {
+  return (params) => operation({
+    ...params,
+    cookie: typeof params.cookie === "string" ? cookieToObject(params.cookie) : {},
+  }, neteaseRequest)
+}
+
 // Expose only the read and QR login operations used by this app.
 const operations = new Map<string, ApiCall>([
-  ["/login/qr/key", login_qr_key as ApiCall],
-  ["/login/qr/create", login_qr_create as ApiCall],
-  ["/login/qr/check", login_qr_check as ApiCall],
-  ["/login/status", login_status as ApiCall],
-  ["/user/account", user_account as ApiCall],
-  ["/user/playlist", (q) => user_playlist({ ...q, uid: q.uid })],
-  ["/playlist/track/all", (q) => playlist_track_all({ ...q, id: q.id })],
-  ["/cloudsearch", (q) => cloudsearch({ ...q, keywords: q.keywords, type: 1 })],
-  ["/song/url/v1", (q) => song_url_v1({ ...q, id: q.id, level: "exhigh" as Parameters<typeof song_url_v1>[0]["level"] })],
-  ["/lyric", (q) => lyric({ ...q, id: q.id })],
+  ["/login/qr/key", bindModule(loginQrKey)],
+  ["/login/qr/create", bindModule(loginQrCreate)],
+  ["/login/qr/check", bindModule(loginQrCheck)],
+  ["/login/status", bindModule(loginStatus)],
+  ["/user/account", bindModule(userAccount)],
+  ["/user/playlist", bindModule(userPlaylist)],
+  ["/playlist/track/all", bindModule(playlistTrackAll)],
+  ["/cloudsearch", bindModule(cloudsearch)],
+  ["/song/url/v1", bindModule(songUrlV1)],
+  ["/lyric", bindModule(lyric)],
 ])
 const allowedParams = new Set(["cookie", "key", "qrimg", "uid", "id", "keywords", "type", "limit", "offset", "level", "noCookie"])
 const headers = { "Cache-Control": "no-store, private" }
