@@ -17,7 +17,7 @@
 
 ## 软件效果
 
-### 音乐首页
+### 平板与桌面
 
 ![燃律音乐首页](public/screenshots/home.webp)
 
@@ -29,6 +29,27 @@
   <tr>
     <td><img src="public/screenshots/library.webp" alt="燃律音乐资料库" /></td>
     <td><img src="public/screenshots/training.webp" alt="燃律训练记录与肌肉图" /></td>
+  </tr>
+</table>
+
+### 手机
+
+<table>
+  <tr>
+    <td width="50%"><strong>音乐首页</strong></td>
+    <td width="50%"><strong>音乐资料库</strong></td>
+  </tr>
+  <tr>
+    <td><img src="public/screenshots/mobile-home.webp" alt="燃律手机版音乐首页" /></td>
+    <td><img src="public/screenshots/mobile-library.webp" alt="燃律手机版音乐资料库" /></td>
+  </tr>
+  <tr>
+    <td><strong>训练记录</strong></td>
+    <td><strong>歌词与播放控制</strong></td>
+  </tr>
+  <tr>
+    <td><img src="public/screenshots/mobile-training.webp" alt="燃律手机版训练记录" /></td>
+    <td><img src="public/screenshots/lyrics.webp" alt="燃律歌词与播放控制页面" /></td>
   </tr>
 </table>
 
