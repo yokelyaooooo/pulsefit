@@ -8,11 +8,16 @@ const config: CapacitorConfig = {
   webDir: "www",
   backgroundColor: "#f7f6fb",
   server: serverUrl
-    ? { url: serverUrl, cleartext: serverUrl.startsWith("http://"), androidScheme: "https" }
-    : { androidScheme: "https" },
+    ? {
+        url: serverUrl,
+        cleartext: serverUrl.startsWith("http://"),
+        androidScheme: "https",
+        errorPath: "offline.html",
+      }
+    : { androidScheme: "https", errorPath: "offline.html" },
   ios: {
     backgroundColor: "#f7f6fb",
-    contentInset: "automatic",
+    contentInset: "never",
   },
   android: {
     backgroundColor: "#f7f6fb",

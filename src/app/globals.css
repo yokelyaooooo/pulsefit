@@ -334,15 +334,15 @@ html::-webkit-scrollbar-button {
 
 /* Shared glass shell. Keep fixed UI outside any transformed/scrolling ancestor. */
 :root { --sidebar-width: 220px; --music-accent: #ce4269; --training-accent: #7561c9; }
-html { scroll-padding-bottom: 180px; }
-body { margin: 0; }
+html { max-width: 100%; scroll-padding-bottom: 180px; }
+body { max-width: 100%; margin: 0; overflow-x: clip; }
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button:not(:disabled), a { touch-action: manipulation; }
 button:not(:disabled) { cursor: pointer; }
 :focus-visible { outline: 3px solid #947dd9; outline-offset: 4px; }
 ::selection { background: #dfd4f8; color: #322646; }
 .boot-screen { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f7f6fb; }
-.app-frame { min-height: 100dvh; }
+.app-frame { width: 100%; min-height: 100dvh; overflow-x: clip; }
 .app-sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-width); z-index: 25; display: flex; flex-direction: column; padding: 30px 18px 20px; border-right: 1px solid #dad2e73d; background: linear-gradient(160deg, #f1eef7eb, #eef2f9e8 72%, #f5edf7ed); backdrop-filter: blur(32px); }
 .brand-lockup { display: flex; align-items: center; gap: 10px; padding: 0 8px 29px; }
 .brand-lockup strong { display: block; font-size: 24px; letter-spacing: -1px; line-height: 1.2; font-weight: 750; }
@@ -365,7 +365,7 @@ button:not(:disabled) { cursor: pointer; }
 .sidebar-profile small { display: block; margin-top: 3px; color: #9c91a8; font-size: 10px; }
 .sidebar-profile > svg { margin-left: auto; color: #978b9f; }
 .profile-icon, .topbar-avatar { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #fff; border-radius: 50%; background: linear-gradient(135deg, #e7e0fa, #edf2fb); color: #8d7ca9; }
-.app-workspace { margin-left: var(--sidebar-width); min-width: 0; }
+.app-workspace { max-width: calc(100vw - var(--sidebar-width)); margin-left: var(--sidebar-width); min-width: 0; }
 .app-topbar { display: flex; align-items: center; justify-content: space-between; height: 77px; max-width: 1320px; margin: 0 auto; padding: 0 44px; }
 .desktop-breadcrumb { display: flex; align-items: center; gap: 12px; font-size: 11px; color: #a298ad; }
 .desktop-breadcrumb strong { font-weight: 500; color: #766b83; }
@@ -391,11 +391,15 @@ button:not(:disabled) { cursor: pointer; }
 @media (max-width: 1100px) and (min-width: 901px) { .app-content { padding-left: 28px; padding-right: 28px; } .app-topbar { padding: 0 28px; } }
 @media (max-width: 900px) {
   :root { --sidebar-width: 0px; }
+  html, body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { position: fixed; inset: 0; }
+  .app-frame { display: flex; width: 100%; height: 100dvh; min-height: 0; overflow: hidden; }
   .app-sidebar, .desktop-breadcrumb { display: none; }
-  .app-topbar { height: auto; min-height: 72px; padding: max(12px, env(safe-area-inset-top)) 21px 9px; }
+  .app-workspace { display: flex; flex: 1; flex-direction: column; width: 100%; height: 100%; max-width: 100%; margin-left: 0; overflow: hidden; }
+  .app-topbar { flex: 0 0 auto; height: auto; min-height: 72px; padding: max(12px, env(safe-area-inset-top)) 21px 9px; }
   .mobile-brand { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 650; letter-spacing: -.3px; }
   .topbar-actions { gap: 13px; }
-  .app-content { padding: 15px 20px calc(175px + env(safe-area-inset-bottom)); }
+  .app-content { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-x: none; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; padding: 15px 20px calc(175px + env(safe-area-inset-bottom)); }
   .app-dock-position { padding: 0 12px max(8px, env(safe-area-inset-bottom)); }
   .app-dock-stack { max-width: 520px; }
   .app-dock { min-height: 63px; border-radius: 30px; }
