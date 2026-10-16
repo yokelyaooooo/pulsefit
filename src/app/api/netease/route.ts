@@ -8,18 +8,29 @@ import playlistTrackAll from "NeteaseCloudMusicApi/module/playlist_track_all"
 import songUrlV1 from "NeteaseCloudMusicApi/module/song_url_v1"
 import userAccount from "NeteaseCloudMusicApi/module/user_account"
 import userPlaylist from "NeteaseCloudMusicApi/module/user_playlist"
-import neteaseRequest from "NeteaseCloudMusicApi/util/request"
+import { writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { isSameOriginRequest } from "@/lib/music/auth-data"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 type ApiResult = { body: unknown; cookie?: string[] }
+type NeteaseRequest = (...args: unknown[]) => Promise<unknown>
 type NeteaseModule = (
   params: Record<string, unknown>,
-  request: typeof neteaseRequest,
+  request: NeteaseRequest,
 ) => Promise<ApiResult>
 type ApiCall = (params: Record<string, string>) => Promise<ApiResult>
+let requestPromise: Promise<NeteaseRequest> | undefined
+
+function loadNeteaseRequest() {
+  requestPromise ??= writeFile(join(tmpdir(), "anonymous_token"), "", { flag: "a" })
+    .then(() => import("NeteaseCloudMusicApi/util/request"))
+    .then((module) => module.default)
+  return requestPromise
+}
 
 function cookieToObject(cookie: string) {
   return Object.fromEntries(cookie.split(";").flatMap((part) => {
@@ -30,10 +41,10 @@ function cookieToObject(cookie: string) {
 }
 
 function bindModule(operation: NeteaseModule): ApiCall {
-  return (params) => operation({
+  return async (params) => operation({
     ...params,
     cookie: typeof params.cookie === "string" ? cookieToObject(params.cookie) : {},
-  }, neteaseRequest)
+  }, await loadNeteaseRequest())
 }
 
 // Expose only the read and QR login operations used by this app.
